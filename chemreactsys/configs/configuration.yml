@@ -1,0 +1,4 @@
+eos_models:
+  - Ping-Robinson: None
+  - Redlich-Kwong: None
+  - Soave-Redlich-Kwong: None
