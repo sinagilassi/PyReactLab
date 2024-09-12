@@ -23,3 +23,5 @@ initial_mole:
 
 equilibrium_constant: None 
 
+eos_model: Peng-Robinson
+
