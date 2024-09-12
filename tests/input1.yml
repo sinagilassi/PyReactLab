@@ -1,0 +1,25 @@
+components:
+  - carbon-dioxide, CO2, g
+  - hydrogen, H2, g
+  - methanol, CH3OH, g
+  - water, H2O, g
+  - carbon-monoxide, CO, g
+
+operating_conditions:
+  temperature: 298.15, K
+  pressure: 15, bar
+
+reactions:
+  - CO2(g) + 3H2(g) <=> CH3OH(g) + H2O(g)
+  - CO2(g) + H2(g) <=> CO(g) + H2O(g)
+  - CO(g) + 2H2(g) <=> CH3OH(g)
+
+initial_mole:
+  - CO2: 0.5
+  - H2: 0.5
+  - CH3OH: 0.5
+  - H2O: 0.5
+  - CO: 0.5
+
+equilibrium_constant: None 
+
