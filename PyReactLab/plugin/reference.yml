@@ -1,0 +1,18 @@
+REFERENCES:
+  ANALYSIS-1:
+    ARGS: None
+    RETURNS: None
+    DEPENDANT-DATA:
+      critical-temperature:
+        name: critical temperature
+        symbol: Tc
+        unit: K
+      critical-pressure:
+        name: critical pressure
+        symbol: Pc
+        unit: Pa
+    DEPENDANT-EQUATIONS:
+      vapor-pressure:
+        name: vapor pressure
+        symbol: VaPr
+        unit: Pa
