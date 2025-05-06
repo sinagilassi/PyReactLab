@@ -7,6 +7,7 @@ import yaml
 
 
 class ReferenceManager:
+    """Reference manager for loading and selecting reference yml files."""
 
     def __init__(self):
         pass

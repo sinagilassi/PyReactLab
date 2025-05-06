@@ -629,7 +629,7 @@ class ReactionAnalyzer:
         # res
         return thermodb_component
 
-    def define_component_id(reaction_res):
+    def define_component_id(self, reaction_res):
         '''
         Define component ID
 
@@ -689,7 +689,7 @@ class ReactionAnalyzer:
         # res
         return component_list, component_dict, comp_list, comp_coeff
 
-    def calculate_mole_fraction(initial_moles):
+    def calculate_mole_fraction(self, initial_moles):
         """
         Calculate mole fractions from initial moles.
 

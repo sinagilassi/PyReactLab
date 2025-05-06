@@ -3,16 +3,20 @@ REFERENCES:
     ARGS: None
     RETURNS: None
     DEPENDANT-DATA:
-      critical-temperature:
-        name: critical temperature
-        symbol: Tc
-        unit: K
-      critical-pressure:
-        name: critical pressure
-        symbol: Pc
-        unit: Pa
+      GIBBS-ENERGY-OF-FORMATION:
+        name: Gibbs energy of formation
+        symbol: GiEnFo
+        unit: molar-basis
+      ENTHALPY-OF-FORMATION:
+        name: enthalpy of formation
+        symbol: EnFo
+        unit: molar-basis
     DEPENDANT-EQUATIONS:
-      vapor-pressure:
+      VAPOR-PRESSURE:
         name: vapor pressure
         symbol: VaPr
         unit: Pa
+      HEAT-CAPACITY:
+        name: heat capacity
+        symbol: Cp
+        unit: molar-basis

@@ -11,8 +11,8 @@ def model_source_checker(model_source: dict) -> bool:
     ----------
     model_source : dict
         Model source parameters as a dictionary defined as:
-        - datasource: Dictionary containing the model data.
-        - equationsource: Dictionary containing the equations.
+        - `datasource`: Dictionary containing the model data.
+        - `equationsource`: Dictionary containing the equations.
 
     Returns
     -------
