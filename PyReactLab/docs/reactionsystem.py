@@ -4,10 +4,11 @@ from typing import Dict, Any, List, Literal, Optional
 from .reaction import Reaction
 from .thermolinkdb import ThermoLinkDB
 from .refmanager import ReferenceManager
-from ..configs import DATASOURCE, EQUATIONSOURCE
+from .reactionanalyzer import ReactionAnalyzer
+from ..utils import ChemReactUtils
 
 
-class ReactionSystem(ThermoLinkDB):
+class ReactionSystem(ThermoLinkDB, ReferenceManager):
     """Class to represent a system of chemical reactions."""
 
     # NOTE: class variables
@@ -24,24 +25,19 @@ class ReactionSystem(ThermoLinkDB):
                  ):
         self.__system_name = system_name
         self.__reactions = reactions
-        self.system_source = model_source
 
+        # NOTE: model source
         self.__model_source = model_source
-        self.__datasource = {
-        } if model_source is None else model_source[DATASOURCE]
-        self.__equationsource = {
-        } if model_source is None else model_source[EQUATIONSOURCE]
 
         # NOTE: init class
-        ThermoLinkDB.__init__(self)
         ReferenceManager.__init__(self)
+        ThermoLinkDB.__init__(self, model_source)
 
-        # NOTE: load reference
-        # reference plugin
+        # SECTION: load reference
+        # reference plugin (default app params)
         self._references = self.load_reference()
 
-        # NOTE: component datasource and equationsource
-        self._datasource, self._equationsource = self.link_thermodb()
+        # SECTION:
 
     def __str__(self):
         """String representation of the reaction system."""
@@ -57,45 +53,43 @@ class ReactionSystem(ThermoLinkDB):
         """Get the reactions of the reaction system."""
         return self.__reactions
 
-    def link_thermodb(self) -> None:
+    def go(self) -> None:
         """
-        Link the reaction system to a thermodynamic database.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
+        Execute the primary analysis for the reaction system.
         """
-        try:
-            # SECTION: set datasource and equationsource
-            # NOTE: check if datasource and equationsource are provided in system_source
-            # datasource
-            datasource = self.system_source.get('datasource')
-            # equationsource
-            equationsource = self.system_source.get('equationsource')
+        # NOTE: initialize
+        ChemReactUtils_ = ChemReactUtils()
+        ReactionAnalyzer_ = ReactionAnalyzer()
 
-            # check if datasource and equationsource are provided
-            if datasource is None or equationsource is None:
-                raise ValueError(
-                    "Datasource and equationsource must be provided in system_source.")
+        # SECTION: reaction system analysis
+        # analyze reaction
+        reaction_res = {}
+        for item in self.reactions:
+            _res = ChemReactUtils_.analyze_reaction(item)
+            # name
+            name = item['name']
+            reaction_res[name] = _res
 
-            # set thermodb link
-            link_status = self.set_thermodb_link(datasource, equationsource)
-            # check
-            if not link_status:
-                raise Exception('Thermodb link failed!')
+        # SECTION: analyze overall reaction
+        res_0 = ChemReactUtils_.analyze_overall_reactions(
+            self.reactions)
 
-            # SECTION:
-            # build datasource
-            component_datasource = self.set_datasource(
-                self.components, reference)
-            # build equation source
-            equation_equationsource = self.set_equationsource(
-                self.components, reference)
+        # SECTION: set component
+        res_1 = ChemReactUtils_.define_component_id(
+            self.reaction_res)
+        # extract
+        component_list, component_dict, comp_list, comp_coeff = res_1
 
-        except Exception as e:
-            raise Exception(
-                f"Error linking thermodynamic database: {e}") from e
+        # SECTION: energy analysis
+        # energy analysis result list
+        self.energy_analysis_res_list = {}
+
+        # loop through each reaction
+        for item in reaction_res:
+            _res = ReactionAnalyzer_.energy_analysis(
+                self.datasource,
+                self.equationsource,
+                reaction_res[item])
+
+            # save
+            self.energy_analysis_res_list[item] = _res

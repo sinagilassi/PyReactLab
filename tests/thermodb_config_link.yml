@@ -10,6 +10,7 @@ CO2:
     Pc: Pc
     Tc: Tc
     AcFa: AcFa
+    EnFo_IG: EnFo_IG
   EQUATIONS:
     vapor-pressure: VaPr
     heat-capacity: Cp_IG
@@ -20,6 +21,7 @@ H2:
     Pc: Pc
     Tc: Tc
     AcFa: AcFa
+    EnFo_IG: EnFo_IG
   EQUATIONS:
     vapor-pressure: VaPr
     heat-capacity: Cp_IG
@@ -30,6 +32,7 @@ CO:
     Pc: Pc
     Tc: Tc
     AcFa: AcFa
+    EnFo_IG: EnFo_IG
   EQUATIONS:
     vapor-pressure: VaPr
     heat-capacity: Cp_IG
@@ -40,6 +43,7 @@ H2O:
     Pc: Pc
     Tc: Tc
     AcFa: AcFa
+    EnFo_IG: EnFo_IG
   EQUATIONS:
     vapor-pressure: VaPr
     heat-capacity: Cp_IG
@@ -50,6 +54,7 @@ CH3OH:
     Pc: Pc
     Tc: Tc
     AcFa: AcFa
+    EnFo_IG: EnFo_IG
   EQUATIONS:
     vapor-pressure: VaPr
     heat-capacity: Cp_IG

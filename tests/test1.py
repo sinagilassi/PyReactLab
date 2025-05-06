@@ -79,10 +79,32 @@ datasource, equationsource = thub1.build()
 # =======================================
 # SECTION: REACTION SYSTEM
 # =======================================
-# NOTE: system source
-system_source = {
+# NOTE: model source
+model_source = {
     "datasource": datasource,
     "equationsource": equationsource
 }
 
 # NOTE: create reaction system
+reaction_system = prl.create_rxn(
+    system_name='Methanol Synthesis',
+    reactions=reactions,
+    model_source=model_source
+)
+
+
+# NOTE: mole fraction
+mole_fraction = {
+    'CO2': 0.1,
+    'H2': 0.3,
+    'CO': 0.2,
+    'H2O': 0.1,
+    'CH3OH': 0.3
+}
+
+# NOTE: model input
+model_inputs = {
+    'mole_fraction': mole_fraction,
+    'temperature': [298.15, "K"],
+    'pressure': [1.0, "bar"],
+}

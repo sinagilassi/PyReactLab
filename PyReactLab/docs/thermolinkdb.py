@@ -1,20 +1,36 @@
 # THERMODB
-
 # import libs
-
+from ..configs import DATASOURCE, EQUATIONSOURCE
 # local
 
 
 class ThermoLinkDB:
+    """Secure link to thermodynamic database."""
     # vars
     _datasource = {}
     _equationsource = {}
     #
     _thermodb_component = {}
 
-    def __init__(self):
+    def __init__(self, model_source: dict):
+        """
+        Initialize the ThermoLinkDB class.
+
+        Parameters
+        ----------
+        model_source : dict
+            Dictionary containing the model source data, having keys as:
+            - 'datasource'
+            - 'equationsource'
+        """
         # load reference
-        pass
+        self.model_source = model_source
+        # extract datasource and equationsource
+        _datasource = model_source.get(DATASOURCE, {})
+        _equationsource = model_source.get(EQUATIONSOURCE, {})
+
+        # NOTE: component datasource and equationsource
+        self.set_thermodb_link(_datasource, _equationsource)
 
     @property
     def datasource(self):
@@ -30,7 +46,7 @@ class ThermoLinkDB:
 
     def set_thermodb_link(self, datasource, equationsource):
         '''
-        Sets thermodb link
+        Sets thermodb link, datasource and equationsource, and thermodb component.
 
         Parameters
         ----------
@@ -41,7 +57,8 @@ class ThermoLinkDB:
 
         Returns
         -------
-        None
+        bool
+            True if successful, False otherwise.
         '''
         try:
             # set datasource | equationsource
@@ -74,7 +91,7 @@ class ThermoLinkDB:
 
     def set_datasource(self, components, reference):
         '''
-        Build datasource
+        Build datasource (check for each component whether all the required data is available)
 
         Parameters
         ----------
@@ -108,12 +125,16 @@ class ThermoLinkDB:
                 if component in self._thermodb_component:
                     # set
                     datasource[component] = {}
-                    # parms
-                    for item in dependent_data:
-                        # get value
-                        _val = self.datasource[component][item]
-                        # save
-                        datasource[component][item] = _val
+
+                    # NOTE: symbol list
+                    if len(dependent_data) > 0:
+                        # ! app default parms (must be in datasource)
+                        for item in dependent_data:
+                            # get value
+                            _val = self.datasource[component][item]
+                            # save
+                            datasource[component][item] = _val
+
             # res
             return datasource
         except Exception as e:
@@ -121,7 +142,7 @@ class ThermoLinkDB:
 
     def set_equationsource(self, components, reference):
         '''
-        Build datasource
+        Build datasource (check for each component whether all the required data is available)
 
         Parameters
         ----------
@@ -155,12 +176,16 @@ class ThermoLinkDB:
                 if component in self._thermodb_component:
                     # set
                     datasource[component] = {}
-                    # parms
-                    for item in dependent_data:
-                        # get value
-                        _val = self.equationsource[component][item]
-                        # save
-                        datasource[component][item] = _val
+
+                    # NOTE: symbol list
+                    if len(dependent_data) > 0:
+                        # ! app default parms (must be in equationsource)
+                        for item in dependent_data:
+                            # get value
+                            _val = self.equationsource[component][item]
+                            # save
+                            datasource[component][item] = _val
+
             # res
             return datasource
         except Exception as e:

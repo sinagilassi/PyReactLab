@@ -122,6 +122,15 @@ class Source:
         -------
         dict
             The extracted property.
+
+        Notes
+        -----
+        The extracted property is a dictionary containing the following keys:
+        - 'symbol': The symbol of the property.
+        - 'property_name': The name of the property.
+        - 'unit': The unit of the property.
+        - 'value': The value of the property.
+        - 'message': A message about the property.
         '''
         if self.datasource is None:
             return None

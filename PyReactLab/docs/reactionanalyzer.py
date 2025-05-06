@@ -18,9 +18,7 @@ class ReactionAnalyzer:
     # pressure [bar]
     P_Ref = PRESSURE_REF_Pa/1e5
 
-    def __init__(self,
-                 datasource: Dict[str, Any],
-                 equationsource: Dict[str, Any]):
+    def __init__(self):
         """
         Initialize the ReactionAnalyzer with a datasource and equationsource.
 
@@ -31,10 +29,15 @@ class ReactionAnalyzer:
         equationsource : dict
             The equationsource containing the reaction equations.
         """
-        self.datasource = datasource
-        self.equationsource = equationsource
+        # self.datasource = datasource
+        # self.equationsource = equationsource
 
-    def energy_analysis(self, reaction, thermodb, decimal_accuracy=5):
+    def energy_analysis(self,
+                        datasource: Dict[str, Any],
+                        equationsource: Dict[str, Any],
+                        reaction,
+                        thermodb,
+                        decimal_accuracy=5):
         '''
         Performs energy analysis of a reaction at STP
 
@@ -628,66 +631,6 @@ class ReactionAnalyzer:
 
         # res
         return thermodb_component
-
-    def define_component_id(self, reaction_res):
-        '''
-        Define component ID
-
-        Parameters
-        ----------
-        reaction_res: dict
-            reaction_res
-
-        Returns
-        -------
-        component_list: list
-            component list
-        component_dict: dict
-            component dict
-        comp_list: list
-            component list
-        comp_coeff: list
-            component coefficient
-        '''
-        # component list
-        component_list = []
-        for item in reaction_res:
-            for reactant in reaction_res[item]['reactants']:
-                component_list.append(reactant['molecule'])
-            for product in reaction_res[item]['products']:
-                component_list.append(product['molecule'])
-
-        # remove duplicate
-        component_list = list(set(component_list))
-
-        # component id: key, value
-        component_dict = {}
-        for i, item in enumerate(component_list):
-            component_dict[item] = i
-
-        # Initialize the component list
-        comp_list = [{i: 0.0 for i in component_dict.keys()}
-                     for _ in range(len(reaction_res))]
-
-        # Iterate over reactions and components
-        for j, reaction in enumerate(reaction_res):
-            for item in component_dict.keys():
-                # Check reactants
-                for reactant in reaction_res[reaction]['reactants']:
-                    if reactant['molecule'] == item:
-                        comp_list[j][item] = -1*float(reactant['coefficient'])
-
-                # Check products
-                for product in reaction_res[reaction]['products']:
-                    if product['molecule'] == item:
-                        comp_list[j][item] = float(product['coefficient'])
-
-        # Convert comp_list to comp_matrix
-        comp_coeff = [[comp_list[j][item] for item in component_dict.keys()]
-                      for j in range(len(reaction_res))]
-
-        # res
-        return component_list, component_dict, comp_list, comp_coeff
 
     def calculate_mole_fraction(self, initial_moles):
         """
