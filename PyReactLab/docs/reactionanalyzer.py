@@ -4,7 +4,8 @@ from math import exp
 #  local
 from ..configs import (
     R_CONST_J__molK, DATASOURCE, EQUATIONSOURCE,
-    PRESSURE_REF_Pa, TEMPERATURE_REF_K
+    PRESSURE_REF_Pa, TEMPERATURE_REF_K,
+    EnFo_IG, EnFo_LIQ, GiEnFo_IG, GiEnFo_LIQ
 )
 
 
@@ -12,11 +13,11 @@ class ReactionAnalyzer:
     """Class to analyze a reaction system."""
     # NOTE: class variables
     # universal gas constant [J/mol.K]
-    R = R_CONST_J__molK
+    __R = R_CONST_J__molK
     # temperature [K]
-    T_Ref = TEMPERATURE_REF_K
+    __T_Ref = TEMPERATURE_REF_K
     # pressure [bar]
-    P_Ref = PRESSURE_REF_Pa/1e5
+    __P_Ref = PRESSURE_REF_Pa/1e5
 
     def __init__(self):
         """
@@ -35,20 +36,22 @@ class ReactionAnalyzer:
     def energy_analysis(self,
                         datasource: Dict[str, Any],
                         equationsource: Dict[str, Any],
-                        reaction,
-                        thermodb,
-                        decimal_accuracy=5):
+                        reaction: Dict[str, Any],
+                        **kwargs):
         '''
         Performs energy analysis of a reaction at STP
 
         Parameters
         ----------
+        datasource : dict
+            The datasource containing the thermodynamic data.
+        equationsource : dict
+            The equationsource containing the reaction equations.
         reaction : dict
-            reaction data
-        thermodb : dict
-            thermo database
-        decimal_accuracy : int
-            decimal accuracy
+            The reaction to be analyzed.
+        kwargs : dict
+            Additional keyword arguments.
+            - decimal_accuracy : int
 
         Returns
         -------
@@ -57,6 +60,7 @@ class ReactionAnalyzer:
 
         Notes
         -----
+        The function performs the following calculations:
         1. calculate gibbs energy of formation
         2. calculate enthalpy of formation
         3. calculate gibbs energy of reaction
@@ -67,19 +71,19 @@ class ReactionAnalyzer:
         - Reference temperature is 298.15 K
         - Reference pressure is 1 bar
         '''
+        # SECTION: kwargs
+        # NOTE: decimal accuracy
+        decimal_accuracy = kwargs.get('decimal_accuracy', 5)
+
         # NOTE: retrieve constants
         # universal gas constant [J/mol.K]
-        R = self.R
+        R = self.__R
         # temperature [K]
-        T = self.T_Ref
+        T = self.__T_Ref
         # pressure [bar]
-        P = self.P_Ref
+        P = self.__P_Ref
 
-        # gibbs energy of reaction
-        gibbs_energy_of_reaction = 0
-        # enthalpy of reaction
-        enthalpy_of_reaction = 0
-
+        # NOTE: thermodb components results
         # thermodb components
         thermodb_component = {}
 
@@ -106,61 +110,93 @@ class ReactionAnalyzer:
             'Ka': 0
         }
 
-        # looping through reactants/products
+        # SECTION: retrieve thermodynamic data
+        # NOTE: looping through reactants
         for reactant in reaction['reactants']:
-            # gibbs energy of formation
-            _val_dGf_IG = thermodb[reactant['molecule']].check_property(
-                'GENERAL').get_property('dGf_IG')['value']
-            # enthalpy of formation
-            _val_dHf_IG = thermodb[reactant['molecule']].check_property(
-                'GENERAL').get_property('dHf_IG')['value']
+            # molecule
+            molecule_ = reactant['molecule']
+            # ! gibbs energy of formation
+            _dGf_IG = datasource[molecule_][GiEnFo_IG]
+            _val_dGf_IG = _dGf_IG['value']
+            # _val_dGf_IG = thermodb[reactant['molecule']].check_property(
+            #     'GENERAL').get_property('dGf_IG')['value']
+            # ! enthalpy of formation
+            _dHf_IG = datasource[molecule_][EnFo_IG]
+            _val_dHf_IG = _dHf_IG['value']
+            # _val_dHf_IG = thermodb[reactant['molecule']].check_property(
+            #     'GENERAL').get_property('dHf_IG')['value']
+
             # save
-            thermodb_component['dGf_IG']['reactants'][reactant['molecule']] = float(
+            thermodb_component['dGf_IG']['reactants'][molecule_] = float(
                 _val_dGf_IG)
-            thermodb_component['dHf_IG']['reactants'][reactant['molecule']] = float(
-                _val_dHf_IG)
-        for product in reaction['products']:
-            # gibbs energy of formation
-            _val_dGf_IG = thermodb[product['molecule']].check_property(
-                'GENERAL').get_property('dGf_IG')['value']
-            # enthalpy of formation
-            _val_dHf_IG = thermodb[product['molecule']].check_property(
-                'GENERAL').get_property('dHf_IG')['value']
-            # save
-            thermodb_component['dGf_IG']['products'][product['molecule']] = float(
-                _val_dGf_IG)
-            thermodb_component['dHf_IG']['products'][product['molecule']] = float(
+            thermodb_component['dHf_IG']['reactants'][molecule_] = float(
                 _val_dHf_IG)
 
-        # calculate gibbs energy of reaction
-        # gibbs energy of reaction
+        # NOTE: looping through products
+        for product in reaction['products']:
+            # molecule
+            molecule_ = product['molecule']
+            # ! gibbs energy of formation
+            _dGf_IG = datasource[molecule_][GiEnFo_IG]
+            _val_dGf_IG = _dGf_IG['value']
+            # _val_dGf_IG = thermodb[product['molecule']].check_property(
+            #     'GENERAL').get_property('dGf_IG')['value']
+            # ! enthalpy of formation
+            _dHf_IG = datasource[molecule_][EnFo_IG]
+            _val_dHf_IG = _dHf_IG['value']
+            # _val_dHf_IG = thermodb[product['molecule']].check_property(
+            #     'GENERAL').get_property('dHf_IG')['value']
+            # save
+            thermodb_component['dGf_IG']['products'][molecule_] = float(
+                _val_dGf_IG)
+            thermodb_component['dHf_IG']['products'][molecule_] = float(
+                _val_dHf_IG)
+
+        # SECTION: calculate gibbs energy of reaction
+        # # NOTE: gibbs energy of reaction
         gibbs_energy_of_reaction_item = 0
         enthalpy_of_reaction_item = 0
+
+        # NOTE: looping through reactants
         for reactant in reaction['reactants']:
-            gibbs_energy_of_reaction_item -= thermodb_component['dGf_IG']['reactants'][reactant['molecule']
-                                                                                       ]*reactant['coefficient']
-            enthalpy_of_reaction_item -= thermodb_component['dHf_IG']['reactants'][reactant['molecule']
-                                                                                   ]*reactant['coefficient']
+            # molecule
+            molecule_ = reactant['molecule']
+            # ! calculate gibbs energy of reaction
+            val_0 = thermodb_component['dGf_IG']['reactants'][molecule_]
+            gibbs_energy_of_reaction_item -= val_0 * reactant['coefficient']
+
+            # ! calculate enthalpy of reaction
+            val_1 = thermodb_component['dHf_IG']['reactants'][molecule_]
+            enthalpy_of_reaction_item -= val_1 * reactant['coefficient']
+
+        # NOTE: looping through products
         for product in reaction['products']:
-            gibbs_energy_of_reaction_item += thermodb_component['dGf_IG']['products'][product['molecule']
-                                                                                      ]*product['coefficient']
-            enthalpy_of_reaction_item += thermodb_component['dHf_IG']['products'][product['molecule']
-                                                                                  ]*product['coefficient']
-        # save
-        # unit kJ/mol
+            # molecule
+            molecule_ = product['molecule']
+            # ! calculate gibbs energy of reaction
+            val_0 = thermodb_component['dGf_IG']['products'][molecule_]
+            gibbs_energy_of_reaction_item += val_0 * product['coefficient']
+
+            # ! calculate enthalpy of reaction
+            val_1 = thermodb_component['dHf_IG']['products'][molecule_]
+            enthalpy_of_reaction_item += val_1 * product['coefficient']
+
+        # NOTE: save results
+        # Gibbs energy of reaction at 298.15 K [kJ/mol]
         thermodb_component['dGrxn_298'] = round(
             gibbs_energy_of_reaction_item, decimal_accuracy)
+        # enthalpy of reaction at 298.15 K [kJ/mol]
         thermodb_component['dHrxn_298'] = round(
             enthalpy_of_reaction_item, decimal_accuracy)
 
-        # equilibrium constant at 298.15 K and 1 bar
+        # NOTE: equilibrium constant at 298.15 K and 1 bar
         _val_Ka = exp(-1*gibbs_energy_of_reaction_item*1000/(R*T))
         thermodb_component['Ka'] = round(_val_Ka, decimal_accuracy)
 
         # res
         return thermodb_component
 
-    def vant_hoff(temperatures, reaction, energy_analysis_res, thermodb, decimal_accuracy=5):
+    def vant_hoff(self, temperatures, reaction, energy_analysis_res, thermodb, decimal_accuracy=5):
         '''
         Calculates change in Gibbs free energy of a reaction at different temperatures.
 

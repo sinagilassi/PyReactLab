@@ -36,3 +36,13 @@ TEMPERATURE_REF_K = 298.15
 # SECTION: PyThermoDBLink/PyThermoDB
 DATASOURCE = "datasource"
 EQUATIONSOURCE = "equationsource"
+
+# NOTE: set symbols
+# enthalpy of formation ideal gas
+EnFo_IG = "EnFo_IG"
+# enthalpy of formation liquid
+EnFo_LIQ = "EnFo_LIQ"
+# gibbs free energy of formation ideal gas
+GiEnFo_IG = "GiEnFo_IG"
+# gibbs free energy of formation liquid
+GiEnFo_LIQ = "GiEnFo_LIQ"

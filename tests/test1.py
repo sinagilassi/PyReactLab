@@ -41,11 +41,11 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 data_folder = os.path.join(current_dir, 'data')
 
 # load thermodb
-CO2 = ptdb.load_thermodb(f'{data_folder}/carbon dioxide.pkl')
-H2 = ptdb.load_thermodb(f'{data_folder}/hydrogen.pkl')
-CO = ptdb.load_thermodb(f'{data_folder}/carbon monoxide.pkl')
-H2O = ptdb.load_thermodb(f'{data_folder}/water.pkl')
-CH3OH = ptdb.load_thermodb(f'{data_folder}/methanol.pkl')
+CO2 = ptdb.load_thermodb(f'{data_folder}/carbon dioxide-1.pkl')
+H2 = ptdb.load_thermodb(f'{data_folder}/hydrogen-1.pkl')
+CO = ptdb.load_thermodb(f'{data_folder}/carbon monoxide-1.pkl')
+H2O = ptdb.load_thermodb(f'{data_folder}/water-1.pkl')
+CH3OH = ptdb.load_thermodb(f'{data_folder}/methanol-1.pkl')
 # log
 print(f'CO2: {CO2.check()}')
 print(f'H2: {H2.check()}')
@@ -61,11 +61,11 @@ thub1 = ptdblink.init()
 print(type(thub1))
 
 # add component thermodb
-thub1.add_thermodb(CO2, name='CO2')
-thub1.add_thermodb(H2, name='H2')
-thub1.add_thermodb(CO, name='CO')
-thub1.add_thermodb(H2O, name='H2O')
-thub1.add_thermodb(CH3OH, name='CH3OH')
+thub1.add_thermodb('CO2', CO2)
+thub1.add_thermodb('H2', H2)
+thub1.add_thermodb('CO', CO)
+thub1.add_thermodb('H2O', H2O)
+thub1.add_thermodb('CH3OH', CH3OH)
 
 # NOTE: add thermodb rule
 thermodb_config_file = os.path.join(current_dir, 'thermodb_config_link.yml')

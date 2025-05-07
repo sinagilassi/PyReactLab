@@ -8,7 +8,8 @@ from .constants import (
     R_CONST_J__molK, PI_CONST,
     PRESSURE_STP_Pa, TEMPERATURE_STP_K,
     PRESSURE_REF_Pa, TEMPERATURE_REF_K,
-    DATASOURCE, EQUATIONSOURCE
+    DATASOURCE, EQUATIONSOURCE,
+    EnFo_IG, EnFo_LIQ, GiEnFo_IG, GiEnFo_LIQ
 )
 
 
@@ -33,5 +34,9 @@ __all__ = [
     "PRESSURE_REF_Pa",
     "TEMPERATURE_REF_K",
     "DATASOURCE",
-    "EQUATIONSOURCE"
+    "EQUATIONSOURCE",
+    "EnFo_IG",
+    "EnFo_LIQ",
+    "GiEnFo_IG",
+    "GiEnFo_LIQ"
 ]
