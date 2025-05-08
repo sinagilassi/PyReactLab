@@ -1,6 +1,8 @@
 # import libs
 from typing import Dict, Any, List, Literal, Optional
 from math import exp
+from pyThermoDB import TableEquation
+import pycuc
 #  local
 from ..configs import (
     R_CONST_J__molK, DATASOURCE, EQUATIONSOURCE,
@@ -51,7 +53,6 @@ class ReactionAnalyzer:
             The reaction to be analyzed.
         kwargs : dict
             Additional keyword arguments.
-            - decimal_accuracy : int
 
         Returns
         -------
@@ -72,8 +73,6 @@ class ReactionAnalyzer:
         - Reference pressure is 1 bar
         '''
         # SECTION: kwargs
-        # NOTE: decimal accuracy
-        decimal_accuracy = kwargs.get('decimal_accuracy', 5)
 
         # NOTE: retrieve constants
         # universal gas constant [J/mol.K]
@@ -81,7 +80,7 @@ class ReactionAnalyzer:
         # temperature [K]
         T = self.__T_Ref
         # pressure [bar]
-        P = self.__P_Ref
+        # P = self.__P_Ref
 
         # NOTE: thermodb components results
         # thermodb components
@@ -97,17 +96,17 @@ class ReactionAnalyzer:
         thermodb_component = {
             'name': reaction_name,
             'reaction': reaction_body,
-            'dGf_IG': {
+            'GiEnFo': {
                 'reactants': {},
                 'products': {}
             },
-            'dHf_IG': {
+            'EnFo': {
                 'reactants': {},
                 'products': {}
             },
-            'dGrxn_298': 0,
-            'dHrxn_298': 0,
-            'Ka': 0
+            'GiEn_rxn_298': 0,
+            'En_rxn_298': 0,
+            'K_eq': 0
         }
 
         # SECTION: retrieve thermodynamic data
@@ -116,41 +115,40 @@ class ReactionAnalyzer:
             # molecule
             molecule_ = reactant['molecule']
             # ! gibbs energy of formation
-            _dGf_IG = datasource[molecule_][GiEnFo_IG]
-            _val_dGf_IG = _dGf_IG['value']
-            # _val_dGf_IG = thermodb[reactant['molecule']].check_property(
-            #     'GENERAL').get_property('dGf_IG')['value']
-            # ! enthalpy of formation
-            _dHf_IG = datasource[molecule_][EnFo_IG]
-            _val_dHf_IG = _dHf_IG['value']
-            # _val_dHf_IG = thermodb[reactant['molecule']].check_property(
-            #     'GENERAL').get_property('dHf_IG')['value']
+            _dGf_IG = datasource[molecule_]['GiEnFo']
+            # add
+            thermodb_component['GiEnFo']['reactants'][molecule_] = {
+                'value': float(_dGf_IG['value']),
+                'unit': _dGf_IG['unit']
+            }
 
-            # save
-            thermodb_component['dGf_IG']['reactants'][molecule_] = float(
-                _val_dGf_IG)
-            thermodb_component['dHf_IG']['reactants'][molecule_] = float(
-                _val_dHf_IG)
+            # ! enthalpy of formation
+            _dHf_IG = datasource[molecule_]['EnFo']
+            # add
+            thermodb_component['EnFo']['reactants'][molecule_] = {
+                'value': float(_dHf_IG['value']),
+                'unit': _dHf_IG['unit']
+            }
 
         # NOTE: looping through products
         for product in reaction['products']:
             # molecule
             molecule_ = product['molecule']
             # ! gibbs energy of formation
-            _dGf_IG = datasource[molecule_][GiEnFo_IG]
-            _val_dGf_IG = _dGf_IG['value']
-            # _val_dGf_IG = thermodb[product['molecule']].check_property(
-            #     'GENERAL').get_property('dGf_IG')['value']
+            _dGf_IG = datasource[molecule_]['GiEnFo']
+            # add
+            thermodb_component['GiEnFo']['products'][molecule_] = {
+                'value': float(_dGf_IG['value']),
+                'unit': _dGf_IG['unit']
+            }
+
             # ! enthalpy of formation
-            _dHf_IG = datasource[molecule_][EnFo_IG]
-            _val_dHf_IG = _dHf_IG['value']
-            # _val_dHf_IG = thermodb[product['molecule']].check_property(
-            #     'GENERAL').get_property('dHf_IG')['value']
-            # save
-            thermodb_component['dGf_IG']['products'][molecule_] = float(
-                _val_dGf_IG)
-            thermodb_component['dHf_IG']['products'][molecule_] = float(
-                _val_dHf_IG)
+            _dHf_IG = datasource[molecule_]['EnFo']
+            # add
+            thermodb_component['EnFo']['products'][molecule_] = {
+                'value': float(_dHf_IG['value']),
+                'unit': _dHf_IG['unit']
+            }
 
         # SECTION: calculate gibbs energy of reaction
         # # NOTE: gibbs energy of reaction
@@ -162,445 +160,183 @@ class ReactionAnalyzer:
             # molecule
             molecule_ = reactant['molecule']
             # ! calculate gibbs energy of reaction
-            val_0 = thermodb_component['dGf_IG']['reactants'][molecule_]
-            gibbs_energy_of_reaction_item -= val_0 * reactant['coefficient']
+            val_0 = thermodb_component['GiEnFo']['reactants'][molecule_]['value']
+            gibbs_energy_of_reaction_item -= val_0 * \
+                reactant['coefficient']
 
             # ! calculate enthalpy of reaction
-            val_1 = thermodb_component['dHf_IG']['reactants'][molecule_]
-            enthalpy_of_reaction_item -= val_1 * reactant['coefficient']
+            val_1 = thermodb_component['EnFo']['reactants'][molecule_]['value']
+            enthalpy_of_reaction_item -= val_1 * \
+                reactant['coefficient']
 
         # NOTE: looping through products
         for product in reaction['products']:
             # molecule
             molecule_ = product['molecule']
             # ! calculate gibbs energy of reaction
-            val_0 = thermodb_component['dGf_IG']['products'][molecule_]
-            gibbs_energy_of_reaction_item += val_0 * product['coefficient']
+            val_0 = thermodb_component['GiEnFo']['products'][molecule_]['value']
+            gibbs_energy_of_reaction_item += val_0 * \
+                product['coefficient']
 
             # ! calculate enthalpy of reaction
-            val_1 = thermodb_component['dHf_IG']['products'][molecule_]
-            enthalpy_of_reaction_item += val_1 * product['coefficient']
+            val_1 = thermodb_component['EnFo']['products'][molecule_]['value']
+            enthalpy_of_reaction_item += val_1 * \
+                product['coefficient']
 
         # NOTE: save results
         # Gibbs energy of reaction at 298.15 K [kJ/mol]
-        thermodb_component['dGrxn_298'] = round(
-            gibbs_energy_of_reaction_item, decimal_accuracy)
+        thermodb_component['GiEn_rxn_298'] = {
+            'value': float(gibbs_energy_of_reaction_item),
+            'unit': 'kJ/mol'
+        }
         # enthalpy of reaction at 298.15 K [kJ/mol]
-        thermodb_component['dHrxn_298'] = round(
-            enthalpy_of_reaction_item, decimal_accuracy)
+        thermodb_component['En_rxn_298'] = {
+            'value': float(enthalpy_of_reaction_item),
+            'unit': 'kJ/mol'
+        }
 
         # NOTE: equilibrium constant at 298.15 K and 1 bar
         _val_Ka = exp(-1*gibbs_energy_of_reaction_item*1000/(R*T))
-        thermodb_component['Ka'] = round(_val_Ka, decimal_accuracy)
-
-        # res
-        return thermodb_component
-
-    def vant_hoff(self, temperatures, reaction, energy_analysis_res, thermodb, decimal_accuracy=5):
-        '''
-        Calculates change in Gibbs free energy of a reaction at different temperatures.
-
-        Parameters
-        ----------
-        temperatures : list
-            temperature range
-        energy_analysis_res : dict
-            energy analysis results
-        reaction : dict
-            reaction results
-        thermodb : dict
-            thermo database
-
-        decimal_accuracy : int
-            set decimal accuracy
-
-        Returns
-        -------
-        list
-            change in Gibbs free energy of a reaction at different temperatures
-        '''
-        # universal gas constant [J/mol.K]
-        R = 8.314
-        # Tref [K]
-        Tref = 298.15
-        # res
-        thermodb_component = {}
-
-        # reaction name
-        reaction_name = reaction['name']
-        # reaction body
-        reaction_body = reaction['reaction']
-
-        # init
-        thermodb_component = {
-            'reaction': reaction_name,
-            'reaction-body': reaction_body,
-            'Ts': {}
+        thermodb_component['K_eq'] = {
+            'value': float(_val_Ka),
+            'unit': 'dimensionless'
         }
 
-        # looping through temperature
-        for T in temperatures:
-            # res
-            res = {
-                'T': None,
-                'parms': {
-                    'reactants': {},
-                    'products': {}
-                },
-                'dGrxn_Ts': None,
-                'dHrxn_Ts': None,
-                'dGrxn_298': 0,
-                'dHrxn_298': 0,
-                'Kas': None
-            }
-
-            # temperature
-            thermodb_component['Ts'][str(T)] = {}
-            thermodb_component['Ts'][str(T)]['T'] = T
-            thermodb_component['Ts'][str(T)]['parms'] = {
-                'reactants': {},
-                'products': {}
-            }
-            thermodb_component['Ts'][str(T)]['dGrxn_Ts'] = []
-            thermodb_component['Ts'][str(T)]['dHrxn_Ts'] = []
-            thermodb_component['Ts'][str(T)]['dGrxn_298'] = 0
-            thermodb_component['Ts'][str(T)]['dHrxn_298'] = 0
-            thermodb_component['Ts'][str(T)]['Kas'] = []
-
-            # looping through reactants
-            for reactant in reaction['reactants']:
-
-                # symbol
-                reactant_symbol = reactant['molecule']
-
-                # enthalpy of formation at 298.15 K [J/mol]
-                dHf_IG = float(
-                    energy_analysis_res['dHf_IG']['reactants'][reactant_symbol])
-                dHf_IG = dHf_IG*1e3
-                # Gibbs free energy of formation at 298.15 K [J/mol]
-                dGf_IG = float(
-                    energy_analysis_res['dGf_IG']['reactants'][reactant_symbol])
-                dGf_IG = dGf_IG*1e3
-
-                # integral Cp/RT
-                _eq_Cp_integral_Cp__RT = thermodb[reactant['molecule']].check_function(
-                    'HEAT-CAPACITY').cal_custom_integral('Cp/RT', T1=Tref, T2=T)
-                # integral Cp/R
-                _eq_Cp_integral_Cp__R = thermodb[reactant['molecule']].check_function(
-                    'HEAT-CAPACITY').cal_custom_integral('Cp/R', T1=Tref, T2=T)
-                # Cp integral
-                _eq_Cp_integral = thermodb[reactant['molecule']].check_function(
-                    'HEAT-CAPACITY').cal_integral(T1=Tref, T2=T)
-
-                # enthalpy of formation at T [J/mol]
-                dHf_T = dHf_IG + (_eq_Cp_integral)
-                # round
-                dHf_T = round(dHf_T, decimal_accuracy)
-
-                # Gibbs free energy of formation at T [J/mol]
-                # A [J/mol]
-                A = (dGf_IG - dHf_IG)/(R*Tref)
-                # B
-                B = dHf_IG/(R*T)
-                # C
-                C = (1/T)*_eq_Cp_integral/R
-                # D
-                D = _eq_Cp_integral_Cp__RT
-                # E
-                E = A + B + C - D
-                # at T [kJ/mol]
-                dGf_T = float(E*R*T)
-                # round
-                dGf_T = round(dGf_T, decimal_accuracy)
-
-                # parms
-                parms = {
-                    'Cp/RT': _eq_Cp_integral_Cp__RT,
-                    'Cp/R': _eq_Cp_integral_Cp__R,
-                    'Cp_T': _eq_Cp_integral,
-                    'dHf_T': dHf_T,
-                    'dGf_T': dGf_T,
-                    'A': A,
-                    'B': B,
-                    'C': C,
-                    'D': D,
-                    'E': E
-                }
-                # save
-                thermodb_component['Ts'][str(
-                    T)]['parms']['reactants'][reactant['molecule']] = parms
-
-            # looping through products
-            for product in reaction['products']:
-
-                # product symbol
-                product_symbol = product['molecule']
-
-                # enthalpy of formation at 298.15 K [J/mol]
-                dHf_IG = float(
-                    energy_analysis_res['dHf_IG']['products'][product_symbol])
-                dHf_IG = dHf_IG*1e3
-                # Gibbs free energy of formation at 298.15 K [J/mol]
-                dGf_IG = float(
-                    energy_analysis_res['dGf_IG']['products'][product_symbol])
-                dGf_IG = dGf_IG*1e3
-
-                # integral Cp/RT
-                _eq_Cp_integral_Cp__RT = thermodb[product['molecule']].check_function(
-                    'HEAT-CAPACITY').cal_custom_integral('Cp/RT', T1=Tref, T2=T)
-                # integral Cp/R
-                _eq_Cp_integral_Cp__R = thermodb[product['molecule']].check_function(
-                    'HEAT-CAPACITY').cal_custom_integral('Cp/R', T1=Tref, T2=T)
-                # Cp integral
-                _eq_Cp_integral = thermodb[product['molecule']].check_function(
-                    'HEAT-CAPACITY').cal_integral(T1=Tref, T2=T)
-
-                # enthalpy of formation at T [J/mol]
-                dHf_T = dHf_IG + (_eq_Cp_integral)
-                # round
-                dHf_T = round(dHf_T, decimal_accuracy)
-
-                # Gibbs free energy of formation at T [J/mol]
-                # A [J/mol]
-                A = (dGf_IG - dHf_IG)/(R*Tref)
-                # B
-                B = dHf_IG/(R*T)
-                # C
-                C = (1/T)*_eq_Cp_integral/R
-                # D
-                D = _eq_Cp_integral_Cp__RT
-                # E
-                E = A + B + C - D
-                # at T [J/mol]
-                dGf_T = float(E*R*T)
-                # round
-                dGf_T = round(dGf_T, decimal_accuracy)
-
-                # parms
-                parms = {
-                    'Cp/RT': _eq_Cp_integral_Cp__RT,
-                    'Cp/R': _eq_Cp_integral_Cp__R,
-                    'Cp_T': _eq_Cp_integral,
-                    'dHf_T': dHf_T,
-                    'dGf_T': dGf_T,
-                    'A': A,
-                    'B': B,
-                    'C': C,
-                    'D': D,
-                    'E': E
-                }
-                # save
-                thermodb_component['Ts'][str(
-                    T)]['parms']['products'][product['molecule']] = parms
-
-            # overall
-            _val_dGrxn_T = 0
-            _val_dHrxn_T = 0
-
-            # looping through reactants
-            for reactant in reaction['reactants']:
-                # dGrxn at T
-                _val_dGrxn_T -= thermodb_component['Ts'][str(
-                    T)]['parms']['reactants'][reactant['molecule']]['dGf_T']*reactant['coefficient']
-                # dHrxn at T
-                _val_dHrxn_T -= thermodb_component['Ts'][str(
-                    T)]['parms']['reactants'][reactant['molecule']]['dHf_T']*reactant['coefficient']
-            # looping through products
-            for product in reaction['products']:
-                # dGrxn at T
-                _val_dGrxn_T += thermodb_component['Ts'][str(
-                    T)]['parms']['products'][product['molecule']]['dGf_T']*product['coefficient']
-
-                # dHrxn at T
-                _val_dHrxn_T += thermodb_component['Ts'][str(
-                    T)]['parms']['products'][product['molecule']]['dHf_T']*product['coefficient']
-            # save
-            _val_dGrxn_T = round(_val_dGrxn_T, decimal_accuracy)
-            _val_dHrxn_T = round(_val_dHrxn_T, decimal_accuracy)
-            thermodb_component['Ts'][str(T)]['dGrxn_Ts'] = _val_dGrxn_T
-            thermodb_component['Ts'][str(T)]['dHrxn_Ts'] = _val_dHrxn_T
-
-            # equilibrium constant
-            Ka = exp(-1*float(_val_dGrxn_T)/(R*T))
-            # save
-            thermodb_component['Ts'][str(T)]['Kas'] = float(Ka)
-
-        # reset
-        _val_dGrxn_T = 0
-        _val_dHrxn_T = 0
-
         # res
         return thermodb_component
 
-    def vant_hoff_T(temperature, reaction, energy_analysis_res, thermodb, decimal_accuracy=5, R=8.314, Tref=298.15):
-        '''
-        Calculates change in Gibbs free energy of a reaction at different temperatures.
+    def component_energy_at_temperature(self,
+                                        datasource: Dict[str, Any],
+                                        equationsource: Dict[str, Any],
+                                        component_name: str,
+                                        temperature: float,
+                                        **kwargs):
+        """
+        Calculate Gibbs and enthalpy energies at a given temperature.
 
         Parameters
         ----------
+        datasource : dict
+            The datasource containing the thermodynamic data.
+        equationsource : dict
+            The equationsource containing the reaction equations.
+        component_name : str
+            The name of the component for which to calculate Gibbs energy and enthalpy.
         temperature : float
-            temperature set
-        energy_analysis_res : dict
-            energy analysis results
-        reaction : dict
-            reaction results
-        thermodb : dict
-            thermo database
-        decimal_accuracy : int
-            set decimal accuracy
+            The temperature at which to calculate Gibbs energy.
+        kwargs : dict
+            Additional keyword arguments.
+            - decimal_accuracy : int
+                Set decimal accuracy.
 
         Returns
         -------
-        list
-            change in Gibbs free energy of a reaction at different temperatures
-        '''
-        # universal gas constant [J/mol.K]
-        # R = 8.314
-        # Tref [K]
-        # Tref = 298.15
-        # res
-        thermodb_component = {}
+        dict
+            A dictionary containing the Gibbs energy and enthalpy at the given
+            temperature as:
+            - EnFo: Enthalpy of formation at 298.15 K.
+            - GiEnFo: Gibbs energy of formation at 298.15 K.
+            - GiEn_T: Gibbs energy at temperature T.
+            - En_T: Enthalpy at temperature T.
 
-        # reaction name
-        reaction_name = reaction['name']
-        # reaction body
-        reaction_body = reaction['reaction']
+        Notes
+        -----
+        The function calculates the Gibbs energy at a given temperature using the following equation:
 
-        # init
-        thermodb_component = {
-            'reaction': reaction_name,
-            'reaction-body': reaction_body,
-            'T': {}
-        }
+        #### (ΔG° / RT) = (ΔG°₀ - ΔH°₀) / (R * T₀) + ΔH°₀ / (R * T) + (1 / T) * ∫(T₀ to T) [ (ΔC°p / R) dT ] - ∫(T₀ to T) [ (ΔC°p / R) * (dT / T) ]
 
-        # set
-        T = temperature
+        Where:
+        - ΔG° : Standard Gibbs energy change at temperature T
+        - ΔG°₀ : Standard Gibbs energy change at reference temperature T₀
+        - ΔH°₀ : Standard enthalpy change at reference temperature T₀
+        - ΔC°p : Standard heat capacity change (Cp_products - Cp_reactants)
+        - R : Gas constant
+        - T : Temperature of interest
+        - T₀ : Reference temperature
 
-        # res
-        res = {
-            'T': T,
-            'parms': {
-                'reactants': {},
-                'products': {}
-            },
-            'dGrxn_Ts': None,
-            'dHrxn_Ts': None,
-            'dGrxn_298': 0,
-            'dHrxn_298': 0,
-            'Kas': None
-        }
+        The results are returned in a dictionary with the following keys:
 
-        # temperature
-        thermodb_component['T'][str(T)] = {}
-        thermodb_component['T'][str(T)]['T'] = T
-        thermodb_component['T'][str(T)]['parms'] = {
-            'reactants': {},
-            'products': {}
-        }
-        thermodb_component['T'][str(T)]['dGrxn_Ts'] = []
-        thermodb_component['T'][str(T)]['dHrxn_Ts'] = []
-        thermodb_component['T'][str(T)]['dGrxn_298'] = 0
-        thermodb_component['T'][str(T)]['dHrxn_298'] = 0
-        thermodb_component['T'][str(T)]['Kas'] = []
+        EnFo : dict
+            Enthalpy of formation at 298.15 K.
+            - value : float
+                Enthalpy of formation value [J/mol].
+            - unit : str
+                Unit of enthalpy of formation.
 
-        # looping through reactants
-        for reactant in reaction['reactants']:
+        GiEnFo : dict
+            Gibbs energy of formation at 298.15 K.
+            - value : float
+                Gibbs energy of formation value [J/mol].
+            - unit : str
+                Unit of Gibbs energy of formation.
 
-            # symbol
-            reactant_symbol = reactant['molecule']
+        GiEn_T : dict
+            Gibbs energy at temperature T.
+            - value : float
+                Gibbs energy value [J/mol].
+            - unit : str
+                Unit of Gibbs energy.
 
-            # enthalpy of formation at 298.15 K [J/mol]
-            dHf_IG = float(
-                energy_analysis_res['dHf_IG']['reactants'][reactant_symbol])
-            dHf_IG = dHf_IG*1e3
-            # Gibbs free energy of formation at 298.15 K [J/mol]
-            dGf_IG = float(
-                energy_analysis_res['dGf_IG']['reactants'][reactant_symbol])
-            dGf_IG = dGf_IG*1e3
+        En_T : dict
+            Enthalpy at temperature T.
+            - value : float
+                Enthalpy value [J/mol].
+            - unit : str
+                Unit of enthalpy.
 
-            # integral Cp/RT
-            _eq_Cp_integral_Cp__RT = thermodb[reactant['molecule']].check_function(
-                'HEAT-CAPACITY').cal_custom_integral('Cp/RT', T1=Tref, T2=T)
-            # integral Cp/R
-            _eq_Cp_integral_Cp__R = thermodb[reactant['molecule']].check_function(
-                'HEAT-CAPACITY').cal_custom_integral('Cp/R', T1=Tref, T2=T)
+        Reference
+        ----------
+        - Introduction to Chemical Engineering Thermodynamics, 9th Edition, (page 544)
+        """
+        try:
+            # NOTE: retrieve constants
+            # universal gas constant [J/mol.K]
+            R = self.__R
+            # temperature [K]
+            T_ref = self.__T_Ref
+            # pressure [bar]
+            # P_ref = self.__P_Ref
+
+            # SECTION: set
+            # temperature [K]
+            T = temperature
+
+            # kwargs
+            # NOTE: decimal accuracy
+            # decimal_accuracy = kwargs.get('decimal_accuracy', 5)
+
+            # SECTION: Gibbs energy at temperature
+            # NOTE: enthalpy of formation at 298.15 K [kJ/mol]
+            EnFo_src = datasource[component_name]['EnFo']
+            EnFo_val = float(EnFo_src['value'])
+            EnFo_unit = EnFo_src['unit']
+            # to [J/mol]
+            EnFo = EnFo_val*1e3
+
+            # NOTE: Gibbs free energy of formation at 298.15 K [kJ/mol]
+            GiEnFo_src = datasource[component_name]['GiEnFo']
+            GiEnFo_val = float(GiEnFo_src['value'])
+            GiEnFo_unit = GiEnFo_src['unit']
+            # to [J/mol]
+            GiEnFo = GiEnFo_val*1e3
+
+            # set equation
+            _eq: TableEquation = equationsource[component_name]['Cp']
+
+            # integral [Cp/RT]
+            _eq_Cp_integral_Cp__RT = _eq.cal_custom_integral(
+                'Cp/RT', T1=T_ref, T2=T)
             # Cp integral
-            _eq_Cp_integral = thermodb[reactant['molecule']].check_function(
-                'HEAT-CAPACITY').cal_integral(T1=Tref, T2=T)
+            _eq_Cp_integral = _eq.cal_integral(T1=T_ref, T2=T)
 
-            # enthalpy of formation at T [J/mol]
-            dHf_T = dHf_IG + (_eq_Cp_integral)
-            # round
-            dHf_T = round(dHf_T, decimal_accuracy)
+            # !enthalpy of formation at T [J/mol]
+            En_T = float(EnFo + (_eq_Cp_integral))
 
-            # Gibbs free energy of formation at T [J/mol]
+            # ! Gibbs free energy of formation at T [J/mol]
             # A [J/mol]
-            A = (dGf_IG - dHf_IG)/(R*Tref)
+            A = (GiEnFo - EnFo)/(R*T_ref)
             # B
-            B = dHf_IG/(R*T)
-            # C
-            C = (1/T)*_eq_Cp_integral/R
-            # D
-            D = _eq_Cp_integral_Cp__RT
-            # E
-            E = A + B + C - D
-            # at T [kJ/mol]
-            dGf_T = float(E*R*T)
-            # round
-            dGf_T = round(dGf_T, decimal_accuracy)
-
-            # parms
-            parms = {
-                'Cp/RT': _eq_Cp_integral_Cp__RT,
-                'Cp/R': _eq_Cp_integral_Cp__R,
-                'Cp_T': _eq_Cp_integral,
-                'dHf_T': dHf_T,
-                'dGf_T': dGf_T,
-                'A': A,
-                'B': B,
-                'C': C,
-                'D': D,
-                'E': E
-            }
-            # save
-            thermodb_component['T'][str(
-                T)]['parms']['reactants'][reactant['molecule']] = parms
-
-        # looping through products
-        for product in reaction['products']:
-
-            # product symbol
-            product_symbol = product['molecule']
-
-            # enthalpy of formation at 298.15 K [J/mol]
-            dHf_IG = float(
-                energy_analysis_res['dHf_IG']['products'][product_symbol])
-            dHf_IG = dHf_IG*1e3
-            # Gibbs free energy of formation at 298.15 K [J/mol]
-            dGf_IG = float(
-                energy_analysis_res['dGf_IG']['products'][product_symbol])
-            dGf_IG = dGf_IG*1e3
-
-            # integral Cp/RT
-            _eq_Cp_integral_Cp__RT = thermodb[product['molecule']].check_function(
-                'HEAT-CAPACITY').cal_custom_integral('Cp/RT', T1=Tref, T2=T)
-            # integral Cp/R
-            _eq_Cp_integral_Cp__R = thermodb[product['molecule']].check_function(
-                'HEAT-CAPACITY').cal_custom_integral('Cp/R', T1=Tref, T2=T)
-            # Cp integral
-            _eq_Cp_integral = thermodb[product['molecule']].check_function(
-                'HEAT-CAPACITY').cal_integral(T1=Tref, T2=T)
-
-            # enthalpy of formation at T [J/mol]
-            dHf_T = dHf_IG + (_eq_Cp_integral)
-            # round
-            dHf_T = round(dHf_T, decimal_accuracy)
-
-            # Gibbs free energy of formation at T [J/mol]
-            # A [J/mol]
-            A = (dGf_IG - dHf_IG)/(R*Tref)
-            # B
-            B = dHf_IG/(R*T)
+            B = EnFo/(R*T)
             # C
             C = (1/T)*_eq_Cp_integral/R
             # D
@@ -608,65 +344,185 @@ class ReactionAnalyzer:
             # E
             E = A + B + C - D
             # at T [J/mol]
-            dGf_T = float(E*R*T)
-            # round
-            dGf_T = round(dGf_T, decimal_accuracy)
+            GiEn_T = float(E*R*T)
 
-            # parms
-            parms = {
-                'Cp/RT': _eq_Cp_integral_Cp__RT,
-                'Cp/R': _eq_Cp_integral_Cp__R,
-                'Cp_T': _eq_Cp_integral,
-                'dHf_T': dHf_T,
-                'dGf_T': dGf_T,
-                'A': A,
-                'B': B,
-                'C': C,
-                'D': D,
-                'E': E
+            return {
+                'EnFo': {
+                    'value': EnFo,
+                    'unit_0': EnFo_unit,
+                    'unit': 'J/mol'
+                },
+                'GiEnFo': {
+                    'value': GiEnFo,
+                    'unit_0': GiEnFo_unit,
+                    'unit': 'J/mol'
+                },
+                'En_T': {
+                    'value': En_T,
+                    'unit': 'J/mol'
+                },
+                'GiEn_T': {
+                    'value': GiEn_T,
+                    'unit': 'J/mol'
+                },
             }
-            # save
-            thermodb_component['T'][str(
-                T)]['parms']['products'][product['molecule']] = parms
+        except Exception as e:
+            raise Exception(
+                f"Error in ReactionAnalyzer.Gibbs_energy_at_temperature(): {str(e)}") from e
 
-        # overall
-        _val_dGrxn_T = 0
-        _val_dHrxn_T = 0
+    def vh(self,
+            datasource: Dict[str, Any],
+            equationsource: Dict[str, Any],
+            temperature: float,
+            reaction: dict,
+            **kwargs):
+        '''
+        Calculates change in Gibbs free energy of a reaction at different temperatures using the Van't Hoff equation.
 
+        Parameters
+        ----------
+        datasource : dict
+            The datasource containing the thermodynamic data.
+        equationsource : dict
+            The equationsource containing the reaction equations.
+        temperature : float
+            The temperature [K] at which to calculate Gibbs energy.
+        reaction : dict
+            The reaction to be analyzed.
+        kwargs : dict
+            Additional keyword arguments.
+
+
+        Returns
+        -------
+        list
+            change in Gibbs free energy of a reaction at different temperatures
+        '''
+        # SECTION: kwargs
+
+        # NOTE: retrieve constants
+        # universal gas constant [J/mol.K]
+        R = self.__R
+        # temperature [K]
+        # T_ref = self.__T_Ref
+        # pressure [bar]
+        # P_ref = self.__P_Ref
+
+        # set temperature [K]
+        T = temperature
+
+        # SECTION: thermodb components results
+        thermodb = {}
+
+        # reaction name
+        reaction_name = reaction['name']
+        # reaction body
+        reaction_body = reaction['reaction']
+
+        # init
+        thermodb = {
+            'reaction': reaction_name,
+            'reaction-body': reaction_body,
+        }
+
+        # set
+        thermodb['T'] = T
+        thermodb['parms'] = {
+            'reactants': {},
+            'products': {}
+        }
+        thermodb['GiEn_rxn'] = 0
+        thermodb['En_rxn'] = 0
+        thermodb['Ka'] = 0
+
+        # SECTION: reactant energy analysis
         # looping through reactants
         for reactant in reaction['reactants']:
-            # dGrxn at T
-            _val_dGrxn_T -= thermodb_component['T'][str(
-                T)]['parms']['reactants'][reactant['molecule']]['dGf_T']*reactant['coefficient']
-            # dHrxn at T
-            _val_dHrxn_T -= thermodb_component['T'][str(
-                T)]['parms']['reactants'][reactant['molecule']]['dHf_T']*reactant['coefficient']
+            # molecule name
+            reactant_name = reactant['molecule']
+
+            # calculate Gibbs energy and enthalpy at T
+            res__ = self.component_energy_at_temperature(
+                datasource,
+                equationsource,
+                reactant_name,
+                T
+            )
+
+            # save
+            thermodb['parms']['reactants'][reactant_name] = res__
+
+        # SECTION: product energy analysis
         # looping through products
         for product in reaction['products']:
-            # dGrxn at T
-            _val_dGrxn_T += thermodb_component['T'][str(
-                T)]['parms']['products'][product['molecule']]['dGf_T']*product['coefficient']
+            # molecule name
+            product_name = product['molecule']
 
-            # dHrxn at T
-            _val_dHrxn_T += thermodb_component['T'][str(
-                T)]['parms']['products'][product['molecule']]['dHf_T']*product['coefficient']
-        # save
-        _val_dGrxn_T = round(_val_dGrxn_T, decimal_accuracy)
-        _val_dHrxn_T = round(_val_dHrxn_T, decimal_accuracy)
-        thermodb_component['T'][str(T)]['dGrxn_Ts'] = _val_dGrxn_T
-        thermodb_component['T'][str(T)]['dHrxn_Ts'] = _val_dHrxn_T
+            # calculate Gibbs energy and enthalpy at T
+            res__ = self.component_energy_at_temperature(
+                datasource,
+                equationsource,
+                product_name,
+                T
+            )
 
-        # equilibrium constant
-        Ka = exp(-1*float(_val_dGrxn_T)/(R*T))
-        # save
-        thermodb_component['T'][str(T)]['Kas'] = float(Ka)
+            # save
+            thermodb['parms']['products'][product_name] = res__
 
-        # reset
+        # SECTION: calculate Gibbs energy of reaction
+        # overall energy analysis
         _val_dGrxn_T = 0
         _val_dHrxn_T = 0
 
+        # NOTE: looping through reactants
+        for reactant in reaction['reactants']:
+            # reactant name
+            reactant_name = reactant['molecule']
+            # src
+            src_ = thermodb['parms']['reactants'][reactant_name]
+
+            # dGrxn at T
+            _val_dGrxn_T -= src_['GiEn_T']['value'] * \
+                reactant['coefficient']
+            # dHrxn at T
+            _val_dHrxn_T -= src_['En_T']['value'] * \
+                reactant['coefficient']
+
+        # NOTE: looping through products
+        for product in reaction['products']:
+            # product name
+            product_name = product['molecule']
+            # src
+            src_ = thermodb['parms']['products'][product_name]
+
+            # dGrxn at T
+            _val_dGrxn_T += src_['GiEn_T']['value'] * \
+                product['coefficient']
+
+            # dHrxn at T
+            _val_dHrxn_T += src_['En_T']['value'] * \
+                product['coefficient']
+
+        # NOTE: save
+        thermodb['GiEn_rxn'] = {
+            'value': float(_val_dGrxn_T),
+            'unit': 'J/mol'
+        }
+        thermodb['En_rxn'] = {
+            'value': float(_val_dHrxn_T),
+            'unit': 'J/mol'
+        }
+
+        # SECTION: equilibrium constant
+        Ka = exp(-1*_val_dGrxn_T/(R*T))
+        # save
+        thermodb['Ka'] = {
+            'value': float(Ka),
+            'unit': 'dimensionless'
+        }
+
         # res
-        return thermodb_component
+        return thermodb
 
     def calculate_mole_fraction(self, initial_moles):
         """

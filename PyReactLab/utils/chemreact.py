@@ -127,7 +127,7 @@ class ChemReactUtils:
             for item in products:
                 reaction_coefficient -= item['coefficient']
 
-            # Carbon count for each component
+            # SECTION: Carbon count for each component
             carbon_count = {}
             for r in reactants:
                 carbon_count[r['molecule']] = self.count_carbon(

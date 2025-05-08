@@ -3,32 +3,44 @@ REFERENCES:
     ARGS: None
     RETURNS: None
     DEPENDANT-DATA:
+      GIBBS-ENERGY-OF-FORMATION:
+          name: Gibbs energy of formation
+          symbol: GiEnFo
+          unit: kJ/mol
       GIBBS-ENERGY-OF-FORMATION-IG:
         name: Gibbs energy of formation
         symbol: GiEnFo_IG
-        unit: molar-basis
+        unit: kJ/mol
       GIBBS-ENERGY-OF-FORMATION-LIQ:
         name: Gibbs energy of formation
         symbol: GiEnFo_LIQ
-        unit: molar-basis
+        unit: kJ/mol
+      ENTHALPY-OF-FORMATION:
+        name: enthalpy of formation
+        symbol: EnFo
+        unit: kJ/mol
       ENTHALPY-OF-FORMATION-IG:
         name: enthalpy of formation
         symbol: EnFo_IG
-        unit: molar-basis
+        unit: kJ/mol
       ENTHALPY-OF-FORMATION-LIQ:
         name: enthalpy of formation
         symbol: EnFo_LIQ
-        unit: molar-basis
+        unit: kJ/mol
     DEPENDANT-EQUATIONS:
       VAPOR-PRESSURE:
         name: vapor pressure
         symbol: VaPr
         unit: Pa
+      HEAT-CAPACITY:
+        name: heat capacity
+        symbol: Cp
+        unit: J/mol.K
       HEAT-CAPACITY-GAS:
         name: heat capacity
         symbol: Cp_IG
-        unit: molar-basis
+        unit: J/mol.K
       HEAT-CAPACITY-LIQUID:
         name: heat capacity
         symbol: Cp_LIQ
-        unit: molar-basis
+        unit: J/mol.K

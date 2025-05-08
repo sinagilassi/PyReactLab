@@ -1,5 +1,6 @@
 # import libs
 import PyReactLab as prl
+from PyReactLab import Reaction
 from rich import print
 import pyThermoDB as ptdb
 import pyThermoLinkDB as ptdblink
@@ -92,6 +93,23 @@ reaction_system = prl.create_rxn(
     model_source=model_source
 )
 
+# Keq at T
+res_ = reaction_system.equilibrium_constant_at_temperature(
+    'Methanol Formation by CO2-Hydrogenation',
+    [300.0, "K"]
+)
+print(f'K_eq: {res_}')
+# NOTE: select reaction
+R1: Reaction = reaction_system.select_reaction(
+    'Methanol Formation by CO2-Hydrogenation')
+R2: Reaction = reaction_system.select_reaction('Reverse-Water-Gas-Shift')
+R3: Reaction = reaction_system.select_reaction(
+    'Methanol Formation by CO-Hydrogenation')
+
+# NOTE: equilibrium constant
+# at 300 K
+K_eq_300 = R1.Keq_T([300.0, "K"])
+print(f'K_eq_300: {K_eq_300}')
 
 # NOTE: mole fraction
 mole_fraction = {

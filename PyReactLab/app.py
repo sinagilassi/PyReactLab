@@ -10,7 +10,7 @@ def create_rxn(
         system_name: str,
         reactions: List[Dict[str, Any]],
         model_source: Dict[str, Any],
-        **kwargs) -> None:
+        **kwargs) -> ReactionSystem:
     """
     Create a reaction system.
 

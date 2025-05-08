@@ -10,58 +10,58 @@ CO2:
     Pc: Pc
     Tc: Tc
     AcFa: AcFa
-    dHf_IG: EnFo_IG
-    dGf_IG: GiEnFo_IG
+    dHf_IG: EnFo
+    dGf_IG: GiEnFo
   EQUATIONS:
     vapor-pressure: VaPr
-    heat-capacity: Cp_IG
+    heat-capacity: Cp
     VAPOR-PRESSURE : VaPr
-    HEAT-CAPACITY : Cp_IG
+    HEAT-CAPACITY : Cp
 H2:
   DATA:
     Pc: Pc
     Tc: Tc
     AcFa: AcFa
-    dHf_IG: EnFo_IG
-    dGf_IG: GiEnFo_IG
+    dHf_IG: EnFo
+    dGf_IG: GiEnFo
   EQUATIONS:
     vapor-pressure: VaPr
-    heat-capacity: Cp_IG
+    heat-capacity: Cp
     VAPOR-PRESSURE : VaPr
-    HEAT-CAPACITY : Cp_IG
+    HEAT-CAPACITY : Cp
 CO:
   DATA:
     Pc: Pc
     Tc: Tc
     AcFa: AcFa
-    dHf_IG: EnFo_IG
-    dGf_IG: GiEnFo_IG
+    dHf_IG: EnFo
+    dGf_IG: GiEnFo
   EQUATIONS:
     vapor-pressure: VaPr
-    heat-capacity: Cp_IG
+    heat-capacity: Cp
     VAPOR-PRESSURE : VaPr
-    HEAT-CAPACITY : Cp_IG
+    HEAT-CAPACITY : Cp
 H2O:
   DATA:
     Pc: Pc
     Tc: Tc
     AcFa: AcFa
-    dHf_IG: EnFo_IG
-    dGf_IG: GiEnFo_IG
+    dHf_IG: EnFo
+    dGf_IG: GiEnFo
   EQUATIONS:
     vapor-pressure: VaPr
-    heat-capacity: Cp_IG
+    heat-capacity: Cp
     VAPOR-PRESSURE : VaPr
-    HEAT-CAPACITY : Cp_IG
+    HEAT-CAPACITY : Cp
 CH3OH:
   DATA:
     Pc: Pc
     Tc: Tc
     AcFa: AcFa
-    dHf_IG: EnFo_IG
-    dGf_IG: GiEnFo_IG
+    dHf_IG: EnFo
+    dGf_IG: GiEnFo
   EQUATIONS:
     vapor-pressure: VaPr
-    heat-capacity: Cp_IG
+    heat-capacity: Cp
     VAPOR-PRESSURE : VaPr
-    HEAT-CAPACITY : Cp_IG
+    HEAT-CAPACITY : Cp
