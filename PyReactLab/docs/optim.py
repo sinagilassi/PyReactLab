@@ -51,6 +51,10 @@ class ReactionOptimizer:
         kwargs : dict
             additional parameters
         '''
+        # datasource
+        self.datasource = datasource
+        # equationsource
+        self.equationsource = equationsource
         # set component dictionary
         self.component_dict = component_dict
         # set component list
@@ -193,9 +197,9 @@ class ReactionOptimizer:
 
     def equilibrium_reaction_objective_function(self,
                                                 x,
-                                                N0s,
-                                                P,
-                                                T,
+                                                N0s: Dict[str, float],
+                                                P: float,
+                                                T: float,
                                                 Keq_dict: Dict[str, float],
                                                 ):
         '''
@@ -223,7 +227,7 @@ class ReactionOptimizer:
         try:
             # NOTE: default values
             # pressure [Pa]
-            P_ref = PRESSURE_REF_Pa
+            P_ref = self.P_Ref_Pa
 
             # NOTE: extent of reaction
             EoR = x
@@ -369,13 +373,13 @@ class ReactionOptimizer:
                                       T: float,
                                       Keq_dict: Dict[str, float],
                                       phase: Literal["liquid", "gas"] = "gas",
-                                      gas_mode: Literal["ideal",
-                                                        "non-ideal"] = "ideal",
-                                      liquid_mode: Literal["ideal",
+                                      gas_mixture: Literal["ideal",
                                                            "non-ideal"] = "ideal",
+                                      liquid_mixture: Literal["ideal",
+                                                              "non-ideal"] = "ideal",
                                       **kwargs):
         """
-        Generate reaction equilibrium equations for gas phase.
+        Generate reaction equilibrium equations for gas and liquid phases.
 
         Parameters
         ----------
@@ -387,9 +391,12 @@ class ReactionOptimizer:
             Temperature [K]
         Keq_dict : dict
             Reaction equilibrium constant dictionary calculated at T as: {key: value}, such as {R1: 0.1, R2: 0.2, ...}
-        mode : str, optional
-            Mode of calculation, by default "ideal".
-            Options are "ideal" or "non-ideal".
+        phase : str, optional
+            Phase of calculation, by default "gas".
+        gas_mixture : str, optional
+            Mode for gas phase calculation, by default "ideal".
+        liquid_mixture : str, optional
+            Mode for liquid phase calculation, by default "ideal".
         kwargs : dict
             Additional parameters for non-ideal calculations.
 
@@ -422,10 +429,44 @@ class ReactionOptimizer:
         - γ_i is the activity coefficient of component i in the liquid phase.
         - X_i is the mole fraction of component i in the liquid phase.
 
-
-
+        Assumptions:
+        - Regular liquid mixtures: Lewis-Randall
+        - Ideal liquid solution: Raoult
+        - Dilute or electrolyte systems: Henry
+        - Poynting correction for liquid mixtures at high pressures.
+        - General theoretical frameworks: Fugacity-based (chemical potential)
         """
         try:
+            # SECTION: fugacity coefficient
+            # fugacity coefficient
+            fugacity_coeff = {}
+
+            # check gas mixture
+            if gas_mixture == "non-ideal":
+                pass
+            elif gas_mixture == "ideal":
+                # set
+                for i, key in enumerate(self.component_dict.keys()):
+                    fugacity_coeff[key] = 1
+            else:
+                raise ValueError(
+                    "Invalid gas mixture mode. Must be 'ideal' or 'non-ideal'.")
+
+            # SECTION: activity coefficient
+            # activity coefficient
+            activity_coeff = {}
+
+            # check liquid mixture
+            if liquid_mixture == "non-ideal":
+                pass
+            elif liquid_mixture == "ideal":
+                # set
+                for i, key in enumerate(self.component_dict.keys()):
+                    activity_coeff[key] = 1
+            else:
+                raise ValueError(
+                    "Invalid liquid mixture mode. Must be 'ideal' or 'non-ideal'.")
+
             # SECTION: equilibrium equation
             # reaction term
             reaction_terms = {}
@@ -447,11 +488,21 @@ class ReactionOptimizer:
                     # final mole fraction
                     Xfs_ = Xfs[molecule_]
 
-                    # fugacity coefficient
+                    # NOTE: cal
+                    # check phase
+                    if state_ == "gas":
+                        # set
+                        term_ = Xfs_ * P * fugacity_coeff[molecule_]
+                    elif state_ == "liquid":
+                        # set
+                        # Lewis-Randall/Raoult
+                        term_ = Xfs_ * activity_coeff[molecule_]
+                    else:
+                        raise ValueError(
+                            "Invalid phase. Must be 'gas' or 'liquid'.")
 
                     # update denominator
-                    denominator *= ((Xfs[item['molecule']]
-                                    * (P/self.P_Ref_Pa)*(1)))**coefficient_
+                    denominator *= (term_)**coefficient_
 
                 # SECTION: loop over products
                 for item in self.reaction_analysis[reaction]['products']:
@@ -463,9 +514,20 @@ class ReactionOptimizer:
                     # final mole fraction
                     Xfs_ = Xfs[molecule_]
 
+                    # NOTE: cal
+                    # check phase
+                    if state_ == "gas":
+                        # set
+                        term_ = Xfs_ * P * fugacity_coeff[molecule_]
+                    elif state_ == "liquid":
+                        # set
+                        term_ = Xfs_ * activity_coeff[molecule_]
+                    else:
+                        raise ValueError(
+                            "Invalid phase. Must be 'gas' or 'liquid'.")
+
                     # update numerator
-                    numerator *= ((Xfs[item['molecule']]*(P/self.P_Ref_Pa)*(1))
-                                  )**coefficient_
+                    numerator *= (term_)**coefficient_
 
                 # NOTE: update reaction term
                 # reaction_terms[reaction] = (
