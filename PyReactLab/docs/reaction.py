@@ -4,6 +4,16 @@ import pycuc
 # local
 from .reactionanalyzer import ReactionAnalyzer
 from ..utils import ChemReactUtils
+from ..configs import (
+    EQUILIBRIUM_CONSTANT_STD, EQUILIBRIUM_CONSTANT_STD_SYMBOL,
+    EQUILIBRIUM_CONSTANT, EQUILIBRIUM_CONSTANT_SYMBOL,
+    GIBBS_FREE_ENERGY_OF_REACTION_STD, GIBBS_FREE_ENERGY_OF_REACTION_STD_SYMBOL,
+    ENTHALPY_OF_REACTION_STD, ENTHALPY_OF_REACTION_STD_SYMBOL,
+    GIBBS_FREE_ENERGY_OF_FORMATION_STD, GIBBS_FREE_ENERGY_OF_FORMATION_STD_SYMBOL,
+    ENTHALPY_OF_FORMATION_STD, ENTHALPY_OF_FORMATION_STD_SYMBOL,
+    GIBBS_FREE_ENERGY_OF_REACTION_T, ENTHALPY_OF_REACTION_T,
+    GIBBS_FREE_ENERGY_OF_REACTION_T_SYMBOL, ENTHALPY_OF_REACTION_T_SYMBOL,
+)
 
 
 class Reaction():
@@ -77,19 +87,21 @@ class Reaction():
                 _input)
 
             # update
-            self.name = name
-            self.reaction = reaction
+            self.reaction_name = name
+            self.reaction_equation = reaction
             self.reactants = _res_0['reactants']
             self.products = _res_0['products']
             self.reaction_coefficient = _res_0['reaction_coefficient']
             self.carbon_count = _res_0['carbon_count']
             self.energy_analysis_result = energy_analysis_result
             # extract
-            self.GiEnFo = energy_analysis_result['GiEnFo']
-            self.EnFo = energy_analysis_result['EnFo']
-            self.GiEn_rxn_298 = energy_analysis_result['GiEn_rxn_298']
-            self.En_rxn_298 = energy_analysis_result['En_rxn_298']
-            self.K_eq = energy_analysis_result['K_eq']
+            self.gibbs_free_energy_of_formation_std = energy_analysis_result[
+                GIBBS_FREE_ENERGY_OF_FORMATION_STD]
+            self.enthalpy_of_formation_std = energy_analysis_result[ENTHALPY_OF_FORMATION_STD]
+            self.gibbs_free_energy_of_reaction_std = energy_analysis_result[
+                GIBBS_FREE_ENERGY_OF_REACTION_STD]
+            self.enthalpy_of_reaction_std = energy_analysis_result[ENTHALPY_OF_REACTION_STD]
+            self.equilibrium_constant_std = energy_analysis_result[EQUILIBRIUM_CONSTANT_STD]
 
             # reaction analysis result
             self.reaction_analysis_result = {
@@ -106,15 +118,21 @@ class Reaction():
             raise Exception(
                 f"Error in ReactionSystem.go(): {str(e)}") from e
 
-    def Keq_T(self, temperature: List[float | str]) -> Dict[str, Any]:
+    def cal_equilibrium_constant(self,
+                                 temperature: List[float | str],
+                                 method: Literal[
+                                     "van't Hoff", "shortcut van't Hoff"
+                                 ] = "van't Hoff") -> Dict[str, Any]:
         """
-        Calculate the equilibrium constant at a given temperature.
+        Calculate the equilibrium constant at a given temperature using the van't Hoff equation.
 
         Parameters
         ----------
         temperature : list[float, str]
-            Temperature in any unit, e.g. [300.0, "K"].
-            It is automatically converted to Kelvin.
+            Temperature in any unit, e.g. [300.0, "K"], It is automatically converted to Kelvin.
+        method : str, optional
+            Method to calculate the equilibrium constant. The default is "van't Hoff".
+            Options are "van't Hoff" or "shortcut van't Hoff".
 
         Returns
         -------
@@ -140,15 +158,105 @@ class Reaction():
             unit_set = f"{temperature[1]} => K"
             T = pycuc.to(temperature[0], unit_set)
 
-            # NOTE: calculate equilibrium constant at a given temperature
-            res = self.ReactionAnalyzer_.vh(
+            # SECTION: calculate equilibrium constant at a given temperature
+            # check if method is valid
+            if method not in ["van't Hoff", "shortcut van't Hoff"]:
+                raise ValueError(
+                    f"Invalid method: {method}, must be 'van't Hoff' or 'shortcut van't Hoff'.")
+
+            if method == "van't Hoff":
+                # ! NOTE: van't Hoff method
+                res = self.ReactionAnalyzer_.vh(
+                    self.datasource,
+                    self.equationsource,
+                    T,
+                    self.reaction_analysis_result,
+                )
+
+                # update
+                res['method'] = method
+                # return
+                return res
+            elif method == "shortcut van't Hoff":
+                # ! NOTE: shortcut van't Hoff method
+                res = self.ReactionAnalyzer_.vh_shortcut(
+                    self.datasource,
+                    self.equationsource,
+                    T,
+                    self.enthalpy_of_reaction_std['value'],
+                    self.equilibrium_constant_std['value'],
+                    self.reaction_name,
+                    self.reaction_equation
+                )
+
+                # update
+                res['method'] = method
+                # return
+                return res
+            else:
+                raise ValueError(
+                    f"Invalid method: {method}, must be 'van't Hoff' or 'shortcut van't Hoff'.")
+
+        except Exception as e:
+            raise Exception(
+                f"Error in ReactionSystem.Keq_T(): {str(e)}") from e
+
+    def cal_reaction_energy(self, temperature: List[float | str]) -> Dict[str, Any]:
+        """
+        Calculate the reaction energy at a given temperature which consists of the following:
+        - Gibbs free energy of reaction at T
+        - Enthalpy of reaction at T
+
+        Parameters
+        ----------
+        temperature : list[float, str]
+            Temperature in any unit, e.g. [300.0, "K"], It is automatically converted to Kelvin.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the reaction energy at the given temperature.
+        """
+        try:
+            # NOTE: check if T
+            # check if T is a list
+            if not isinstance(temperature, list):
+                raise ValueError("Temperature must be a list.")
+
+            # check if T is a number
+            if not isinstance(temperature[0], (int, float)):
+                raise ValueError("Temperature must be a number.")
+
+            # check if T is a string
+            if not isinstance(temperature[1], str):
+                raise ValueError("Temperature unit must be a string.")
+
+            # NOTE: convert temperature to Kelvin
+            # set unit
+            unit_set = f"{temperature[1]} => K"
+            T = pycuc.to(temperature[0], unit_set)
+
+            # SECTION: calculate reaction energy at a given temperature
+            res = self.ReactionAnalyzer_.reaction_energy_analysis(
                 self.datasource,
                 self.equationsource,
                 T,
                 self.reaction_analysis_result,
             )
 
-            return res
+            # NOTE: extract reaction energy
+            return {
+                "reaction_name": self.reaction_name,
+                "reaction_equation": self.reaction_equation,
+                "temperature": {
+                    "value": T,
+                    "symbol": "T",
+                    "unit": "K",
+                },
+                GIBBS_FREE_ENERGY_OF_REACTION_T: res[GIBBS_FREE_ENERGY_OF_REACTION_T],
+                ENTHALPY_OF_REACTION_T: res[ENTHALPY_OF_REACTION_T],
+            }
+
         except Exception as e:
             raise Exception(
                 f"Error in ReactionSystem.Keq_T(): {str(e)}") from e

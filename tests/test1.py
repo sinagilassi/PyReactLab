@@ -94,7 +94,7 @@ reaction_system = prl.create_rxn(
 )
 
 # Keq at T
-res_ = reaction_system.equilibrium_constant_at_temperature(
+res_ = reaction_system.cal_reaction_equilibrium_constant(
     'Methanol Formation by CO2-Hydrogenation',
     [300.0, "K"]
 )
@@ -107,9 +107,18 @@ R3: Reaction = reaction_system.select_reaction(
     'Methanol Formation by CO-Hydrogenation')
 
 # NOTE: equilibrium constant
+# at std
+print(f'K_eq: {R1.equilibrium_constant_std}')
 # at 300 K
-K_eq_300 = R1.Keq_T([300.0, "K"])
+K_eq_300 = R1.cal_equilibrium_constant([300.0, "K"])
 print(f'K_eq_300: {K_eq_300}')
+K_eq_300 = R1.cal_equilibrium_constant(
+    [300.0, "K"], method="shortcut van't Hoff")
+print(f'K_eq_300: {K_eq_300}')
+
+# NOTE: energy of reaction
+res_ = R1.cal_reaction_energy([300.0, "K"])
+print(f'En_rxn: {res_}')
 
 # NOTE: mole fraction
 mole_fraction = {

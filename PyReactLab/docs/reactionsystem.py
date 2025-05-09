@@ -100,7 +100,6 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
 
                 # NOTE: analyze reaction
                 _res = r_.reaction_analysis_result
-                # _res = ChemReactUtils_.analyze_reaction(item)
 
                 # name
                 name = item['name']
@@ -110,6 +109,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 self.__reaction_list[name] = r_
 
             # SECTION: analyze overall reaction
+            # ! to set consumed, produced, and intermediate species
             res_0 = ChemReactUtils_.analyze_overall_reactions(
                 self.reactions)
 
@@ -129,11 +129,6 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 name = item
 
                 # NOTE: energy analysis
-                # _res = ReactionAnalyzer_.energy_analysis(
-                #     self.datasource,
-                #     self.equationsource,
-                #     reaction_res[item])
-
                 reaction_ = self.__reaction_list[name]
                 _res = reaction_.energy_analysis_result
 
@@ -141,30 +136,38 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 energy_analysis_res_list[item] = _res
 
             # NOTE: set primary analysis result
-            self.reaction_res = reaction_res
-            self.overall_reaction_res = res_0
-            self.component_list = component_list
-            self.component_dict = component_dict
-            self.comp_list = comp_list
-            self.comp_coeff = comp_coeff
+            self.reaction_analysis = reaction_res
+            self.overall_reaction_analysis = res_0
+            self.reaction_states = None
+            self.component_list = component_list  # ? list of components
+            self.component_dict = component_dict  # ? dict of component: id
+            self.coeff_list_dict = comp_list  # ? list of dict of component: coeff
+            self.coeff_list_list = comp_coeff  # ? list of list of component coeff
             self.energy_analysis_res_list = energy_analysis_res_list
 
         except Exception as e:
             raise Exception(
                 f"Error in ReactionSystem.go(): {str(e)}") from e
 
-    def equilibrium_constant_at_temperature(self,
-                                            reaction_name: str,
-                                            temperature: list[float | str]):
+    def cal_reaction_equilibrium_constant(self,
+                                          reaction_name: str,
+                                          temperature: list[float | str],
+                                          method: Literal[
+                                              "van't Hoff", "shortcut van't Hoff"
+                                          ] = "van't Hoff",
+                                          ):
         """
-        Calculate the equilibrium constant at a given temperature.
+        Calculate the equilibrium constant at a given temperature using the van't Hoff equation.
 
         Parameters
         ----------
         reaction_name : str
             Name of the reaction.
-        temperature : float
-            Temperature in Kelvin.
+        temperature : list
+            Temperature in the form of [value, unit], the unit is automatically converted to K.
+        method : str, optional
+            Method to calculate the equilibrium constant, by default "van't Hoff".
+            Options are "van't Hoff" or "shortcut van't Hoff".
 
         Returns
         -------
@@ -201,7 +204,8 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                     f"Invalid reaction object for {reaction_name}")
 
             # NOTE: calculate equilibrium constant at the given temperature
-            return reaction.Keq_T(temperature)
+            return reaction.cal_equilibrium_constant(
+                temperature, method=method)
 
         except Exception as e:
             raise Exception(

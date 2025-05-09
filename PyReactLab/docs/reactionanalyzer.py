@@ -7,7 +7,14 @@ import pycuc
 from ..configs import (
     R_CONST_J__molK, DATASOURCE, EQUATIONSOURCE,
     PRESSURE_REF_Pa, TEMPERATURE_REF_K,
-    EnFo_IG, EnFo_LIQ, GiEnFo_IG, GiEnFo_LIQ
+    EQUILIBRIUM_CONSTANT_STD, EQUILIBRIUM_CONSTANT_STD_SYMBOL,
+    EQUILIBRIUM_CONSTANT, EQUILIBRIUM_CONSTANT_SYMBOL,
+    GIBBS_FREE_ENERGY_OF_REACTION_STD, GIBBS_FREE_ENERGY_OF_REACTION_STD_SYMBOL,
+    ENTHALPY_OF_REACTION_STD, ENTHALPY_OF_REACTION_STD_SYMBOL,
+    GIBBS_FREE_ENERGY_OF_FORMATION_STD, GIBBS_FREE_ENERGY_OF_FORMATION_STD_SYMBOL,
+    ENTHALPY_OF_FORMATION_STD, ENTHALPY_OF_FORMATION_STD_SYMBOL,
+    GIBBS_FREE_ENERGY_OF_REACTION_T, ENTHALPY_OF_REACTION_T,
+    GIBBS_FREE_ENERGY_OF_REACTION_T_SYMBOL, ENTHALPY_OF_REACTION_T_SYMBOL,
 )
 
 
@@ -56,8 +63,8 @@ class ReactionAnalyzer:
 
         Returns
         -------
-        thermodb_component : dict
-            thermodb component data
+        data_src : dict
+            energy analysis results
 
         Notes
         -----
@@ -84,7 +91,7 @@ class ReactionAnalyzer:
 
         # NOTE: thermodb components results
         # thermodb components
-        thermodb_component = {}
+        data_src = {}
 
         # reaction results
         # reaction name
@@ -93,20 +100,21 @@ class ReactionAnalyzer:
         reaction_body = reaction['reaction']
 
         # update
-        thermodb_component = {
+        data_src = {
             'name': reaction_name,
             'reaction': reaction_body,
-            'GiEnFo': {
+            GIBBS_FREE_ENERGY_OF_FORMATION_STD: {
                 'reactants': {},
-                'products': {}
+                'products': {},
+                'symbol': GIBBS_FREE_ENERGY_OF_FORMATION_STD_SYMBOL,
+                'unit': 'kJ/mol'
             },
-            'EnFo': {
+            ENTHALPY_OF_FORMATION_STD: {
                 'reactants': {},
-                'products': {}
-            },
-            'GiEn_rxn_298': 0,
-            'En_rxn_298': 0,
-            'K_eq': 0
+                'products': {},
+                'symbol': ENTHALPY_OF_FORMATION_STD_SYMBOL,
+                'unit': 'kJ/mol'
+            }
         }
 
         # SECTION: retrieve thermodynamic data
@@ -116,16 +124,16 @@ class ReactionAnalyzer:
             molecule_ = reactant['molecule']
             # ! gibbs energy of formation
             _dGf_IG = datasource[molecule_]['GiEnFo']
-            # add
-            thermodb_component['GiEnFo']['reactants'][molecule_] = {
+            # ? add
+            data_src[GIBBS_FREE_ENERGY_OF_FORMATION_STD]['reactants'][molecule_] = {
                 'value': float(_dGf_IG['value']),
                 'unit': _dGf_IG['unit']
             }
 
             # ! enthalpy of formation
             _dHf_IG = datasource[molecule_]['EnFo']
-            # add
-            thermodb_component['EnFo']['reactants'][molecule_] = {
+            # ? add
+            data_src[ENTHALPY_OF_FORMATION_STD]['reactants'][molecule_] = {
                 'value': float(_dHf_IG['value']),
                 'unit': _dHf_IG['unit']
             }
@@ -136,16 +144,16 @@ class ReactionAnalyzer:
             molecule_ = product['molecule']
             # ! gibbs energy of formation
             _dGf_IG = datasource[molecule_]['GiEnFo']
-            # add
-            thermodb_component['GiEnFo']['products'][molecule_] = {
+            # ? add
+            data_src[GIBBS_FREE_ENERGY_OF_FORMATION_STD]['products'][molecule_] = {
                 'value': float(_dGf_IG['value']),
                 'unit': _dGf_IG['unit']
             }
 
             # ! enthalpy of formation
             _dHf_IG = datasource[molecule_]['EnFo']
-            # add
-            thermodb_component['EnFo']['products'][molecule_] = {
+            # ? add
+            data_src[ENTHALPY_OF_FORMATION_STD]['products'][molecule_] = {
                 'value': float(_dHf_IG['value']),
                 'unit': _dHf_IG['unit']
             }
@@ -160,12 +168,12 @@ class ReactionAnalyzer:
             # molecule
             molecule_ = reactant['molecule']
             # ! calculate gibbs energy of reaction
-            val_0 = thermodb_component['GiEnFo']['reactants'][molecule_]['value']
+            val_0 = data_src[GIBBS_FREE_ENERGY_OF_FORMATION_STD]['reactants'][molecule_]['value']
             gibbs_energy_of_reaction_item -= val_0 * \
                 reactant['coefficient']
 
             # ! calculate enthalpy of reaction
-            val_1 = thermodb_component['EnFo']['reactants'][molecule_]['value']
+            val_1 = data_src[ENTHALPY_OF_FORMATION_STD]['reactants'][molecule_]['value']
             enthalpy_of_reaction_item -= val_1 * \
                 reactant['coefficient']
 
@@ -174,36 +182,40 @@ class ReactionAnalyzer:
             # molecule
             molecule_ = product['molecule']
             # ! calculate gibbs energy of reaction
-            val_0 = thermodb_component['GiEnFo']['products'][molecule_]['value']
+            val_0 = data_src[GIBBS_FREE_ENERGY_OF_FORMATION_STD]['products'][molecule_]['value']
             gibbs_energy_of_reaction_item += val_0 * \
                 product['coefficient']
 
             # ! calculate enthalpy of reaction
-            val_1 = thermodb_component['EnFo']['products'][molecule_]['value']
+            val_1 = data_src[ENTHALPY_OF_FORMATION_STD]['products'][molecule_]['value']
             enthalpy_of_reaction_item += val_1 * \
                 product['coefficient']
 
         # NOTE: save results
         # Gibbs energy of reaction at 298.15 K [kJ/mol]
-        thermodb_component['GiEn_rxn_298'] = {
+        data_src[GIBBS_FREE_ENERGY_OF_REACTION_STD] = {
             'value': float(gibbs_energy_of_reaction_item),
+            'symbol': GIBBS_FREE_ENERGY_OF_REACTION_STD_SYMBOL,
             'unit': 'kJ/mol'
         }
         # enthalpy of reaction at 298.15 K [kJ/mol]
-        thermodb_component['En_rxn_298'] = {
+        data_src[ENTHALPY_OF_REACTION_STD] = {
             'value': float(enthalpy_of_reaction_item),
+            'symbol': ENTHALPY_OF_REACTION_STD_SYMBOL,
             'unit': 'kJ/mol'
         }
 
         # NOTE: equilibrium constant at 298.15 K and 1 bar
         _val_Ka = exp(-1*gibbs_energy_of_reaction_item*1000/(R*T))
-        thermodb_component['K_eq'] = {
+        # ? add
+        data_src[EQUILIBRIUM_CONSTANT_STD] = {
             'value': float(_val_Ka),
+            'symbol': EQUILIBRIUM_CONSTANT_STD_SYMBOL,
             'unit': 'dimensionless'
         }
 
         # res
-        return thermodb_component
+        return data_src
 
     def component_energy_at_temperature(self,
                                         datasource: Dict[str, Any],
@@ -370,14 +382,14 @@ class ReactionAnalyzer:
             raise Exception(
                 f"Error in ReactionAnalyzer.Gibbs_energy_at_temperature(): {str(e)}") from e
 
-    def vh(self,
-            datasource: Dict[str, Any],
-            equationsource: Dict[str, Any],
-            temperature: float,
-            reaction: dict,
-            **kwargs):
+    def reaction_energy_analysis(self,
+                                 datasource: Dict[str, Any],
+                                 equationsource: Dict[str, Any],
+                                 temperature: float,
+                                 reaction: dict,
+                                 **kwargs):
         '''
-        Calculates change in Gibbs free energy of a reaction at different temperatures using the Van't Hoff equation.
+        Calculates change in Gibbs free energy and enthalpy of a reaction at different temperatures.
 
         Parameters
         ----------
@@ -392,11 +404,10 @@ class ReactionAnalyzer:
         kwargs : dict
             Additional keyword arguments.
 
-
         Returns
         -------
         list
-            change in Gibbs free energy of a reaction at different temperatures
+            change in Gibbs free energy and enthalpy of a reaction at different temperatures.
         '''
         # SECTION: kwargs
 
@@ -425,15 +436,16 @@ class ReactionAnalyzer:
             'reaction-body': reaction_body,
         }
 
-        # set
-        thermodb['T'] = T
+        # ? update
+        thermodb['temperature'] = {
+            'value': float(T),
+            'symbol': 'T',
+            'unit': 'K'
+        }
         thermodb['parms'] = {
             'reactants': {},
             'products': {}
         }
-        thermodb['GiEn_rxn'] = 0
-        thermodb['En_rxn'] = 0
-        thermodb['Ka'] = 0
 
         # SECTION: reactant energy analysis
         # looping through reactants
@@ -504,25 +516,155 @@ class ReactionAnalyzer:
                 product['coefficient']
 
         # NOTE: save
-        thermodb['GiEn_rxn'] = {
+        thermodb[GIBBS_FREE_ENERGY_OF_REACTION_T] = {
             'value': float(_val_dGrxn_T),
+            'symbol': GIBBS_FREE_ENERGY_OF_REACTION_T_SYMBOL,
             'unit': 'J/mol'
         }
-        thermodb['En_rxn'] = {
+        thermodb[ENTHALPY_OF_REACTION_T] = {
             'value': float(_val_dHrxn_T),
+            'symbol': ENTHALPY_OF_REACTION_T_SYMBOL,
             'unit': 'J/mol'
-        }
-
-        # SECTION: equilibrium constant
-        Ka = exp(-1*_val_dGrxn_T/(R*T))
-        # save
-        thermodb['Ka'] = {
-            'value': float(Ka),
-            'unit': 'dimensionless'
         }
 
         # res
         return thermodb
+
+    def vh(self,
+            datasource: Dict[str, Any],
+            equationsource: Dict[str, Any],
+            temperature: float,
+            reaction: dict,
+            **kwargs):
+        '''
+        Calculates change in Gibbs free energy of a reaction at different temperatures using the Van't Hoff equation.
+
+        Parameters
+        ----------
+        datasource : dict
+            The datasource containing the thermodynamic data.
+        equationsource : dict
+            The equationsource containing the reaction equations.
+        temperature : float
+            The temperature [K] at which to calculate Gibbs energy.
+        reaction : dict
+            The reaction to be analyzed.
+        kwargs : dict
+            Additional keyword arguments.
+
+
+        Returns
+        -------
+        list
+            change in Gibbs free energy of a reaction at different temperatures
+        '''
+        try:
+            # SECTION: kwargs
+
+            # NOTE: retrieve constants
+            # universal gas constant [J/mol.K]
+            R = self.__R
+            # temperature [K]
+            # T_ref = self.__T_Ref
+            # pressure [bar]
+            # P_ref = self.__P_Ref
+
+            # set temperature [K]
+            T = temperature
+
+            # SECTION: reactant energy analysis
+            res_ = self.reaction_energy_analysis(
+                datasource,
+                equationsource,
+                temperature,
+                reaction
+            )
+
+            # NOTE: Gibbs energy of reaction at T [J/mol]
+            _val_dGrxn_T = res_[GIBBS_FREE_ENERGY_OF_REACTION_T]['value']
+
+            # SECTION: equilibrium constant
+            Ka = exp(-1*_val_dGrxn_T/(R*T))
+            # ? save
+            return {
+                'value': float(Ka),
+                "symbol": EQUILIBRIUM_CONSTANT_SYMBOL,
+                'unit': 'dimensionless',
+                'temperature': {
+                    'value': float(T),
+                    'symbol': 'T',
+                    'unit': 'K'
+                },
+                'reaction': {
+                    'name': reaction['name'],
+                    'reaction': reaction['reaction']
+                },
+            }
+        except Exception as e:
+            raise Exception(
+                f"Error in ReactionAnalyzer.vh(): {str(e)}") from e
+
+    def vh_shortcut(self,
+                    datasource: Dict[str, Any],
+                    equationsource: Dict[str, Any],
+                    temperature: float,
+                    enthalpy_of_reaction_std: float,
+                    equilibrium_constant_std: float,
+                    reaction_name: str,
+                    reaction_body: str,
+                    **kwargs):
+        """
+        Shortcut for Van't Hoff equation.
+
+        Parameters
+        ----------
+        datasource : dict
+            The datasource containing the thermodynamic data.
+        equationsource : dict
+            The equationsource containing the reaction equations.
+        temperature : float
+            The temperature [K] at which to calculate Gibbs energy.
+        enthalpy_of_reaction_std : float
+            Enthalpy of reaction at standard conditions [kJ/mol].
+        equilibrium_constant_std : float
+            Equilibrium constant at standard conditions [dimensionless].
+        reaction_name : str
+            Name of the reaction.
+        reaction_body : str
+            Reaction body.
+        kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        float
+            Equilibrium constant at the given temperature [dimensionless].
+        """
+        try:
+            # NOTE:convert energy to [J/mol]
+            A = (-1*enthalpy_of_reaction_std*1000/self.__R) * \
+                (1/temperature - 1/self.__T_Ref)
+            Ka = equilibrium_constant_std*exp(A)
+
+            # res
+            return {
+                'value': float(Ka),
+                'symbol': EQUILIBRIUM_CONSTANT_SYMBOL,
+                'unit': 'dimensionless',
+                'temperature': {
+                    'value': float(temperature),
+                    'symbol': 'T',
+                    'unit': 'K'
+                },
+                'reaction': {
+                    'name': reaction_name,
+                    'reaction': reaction_body
+                },
+            }
+
+        except Exception as e:
+            raise Exception(
+                f"Error in ReactionAnalyzer.vh_shortcut(): {str(e)}") from e
 
     def calculate_mole_fraction(self, initial_moles):
         """
