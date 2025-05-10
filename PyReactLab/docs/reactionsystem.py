@@ -217,25 +217,21 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 f"Error in ReactionSystem.equilibrium_constant_at_temperature(): {str(e)}") from e
 
     def equilibrium(self,
-                    initial_mole_fraction: Dict[str, float],
-                    temperature: list[float | str],
-                    pressure: list[float | str],
-                    gas_mixture: Literal["ideal",
-                                         "non-ideal"] = "ideal",
-                    liquid_mixture: Literal["ideal",
-                                            "non-ideal"] = "ideal",
+                    inputs: Dict[str, Any],
+                    gas_mixture: Literal[
+                        "ideal", "non-ideal"
+                    ] = "ideal",
+                    liquid_mixture: Literal[
+                        "ideal", "non-ideal"
+                    ] = "ideal",
                     **kwargs):
         """
         Calculate the equilibrium state of the reaction system.
 
         Parameters
         ----------
-        initial_mole_fraction : dict
-            Initial mole fraction of the components.
-        temperature : list
-            Temperature in the form of [value, unit], the unit is automatically converted to K.
-        pressure : list
-            Pressure in the form of [value, unit], the unit is automatically converted to bar.
+        inputs : dict
+            Inputs for the equilibrium calculation which must contain:
         **kwargs : dict
             Additional arguments for the calculation.
                 - eos_model: Equation of state model to use for the calculation. Options are "SRK" or "PR".
@@ -248,12 +244,31 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
 
         Notes
         -----
-        The fugacity ratio term in the equilibrium constant is calculated as:
-        - gas phase
+        Inputs must contain `mole_fraction` or `mole`, `temperature`, and `pressure` as follows:
+
+        - mole_fraction: dict, initial mole fraction of the components in the system.
+        - mole: dict, initial mole of the components in the system.
+        - temperature: list, temperature in the form of [value, unit].
+        - pressure: list, pressure in the form of [value, unit].
         """
         try:
             # SECTION: check args
+            # NOTE: check if inputs are valid
+            if not isinstance(inputs, dict):
+                raise ValueError("Inputs must be a dictionary.")
+            # check if inputs are valid
+            if not any(key in inputs for key in ["mole_fraction", "mole"]):
+                raise ValueError(
+                    "Inputs must contain either mole_fraction or mole.")
+            if "temperature" not in inputs:
+                raise ValueError("Inputs must contain temperature.")
+            if "pressure" not in inputs:
+                raise ValueError("Inputs must contain pressure.")
+
             # NOTE: check if temperature is valid
+            # set
+            temperature = inputs["temperature"]
+            # check if temperature is valid
             if not isinstance(temperature, list):
                 raise ValueError("Temperature must be a number.")
 
@@ -268,7 +283,15 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             if not isinstance(temperature[1], str):
                 raise ValueError("Temperature unit must be a string.")
 
+            # ! convert to K
+            # set unit
+            unit_set = f"{temperature[1]} => K"
+            temperature_K = pycuc.to(temperature[0], unit_set)
+
             # NOTE: check if pressure is valid
+            # set
+            pressure = inputs["pressure"]
+            # check if pressure is valid
             if not isinstance(pressure, list):
                 raise ValueError("Pressure must be a number.")
 
@@ -283,19 +306,58 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             if not isinstance(pressure[1], str):
                 raise ValueError("Pressure unit must be a string.")
 
-            # NOTE: check if initial mole fraction is valid
-            if not isinstance(initial_mole_fraction, dict):
-                raise ValueError(
-                    "Initial mole fraction must be a dictionary.")
+            # ! convert to bar
+            # set unit
+            unit_set = f"{pressure[1]} => bar"
+            pressure_bar = pycuc.to(pressure[0], unit_set)
 
-            # check if initial mole fraction is valid
-            for key in initial_mole_fraction:
-                if not isinstance(key, str):
+            # NOTE: check if initial mole fraction is valid
+            # set
+            initial_mole_fraction = inputs.get("mole_fraction", None)
+            # check
+            initial_mole = inputs.get("mole", None)
+
+            if initial_mole_fraction is not None:
+                # check if initial mole fraction is valid
+                if not isinstance(initial_mole_fraction, dict):
                     raise ValueError(
-                        "Initial mole fraction key must be a string.")
-                if not isinstance(initial_mole_fraction[key], (int, float)):
-                    raise ValueError(
-                        "Initial mole fraction value must be a number.")
+                        "Initial mole fraction must be a dictionary.")
+
+                # check if initial mole fraction is valid
+                for key in initial_mole_fraction:
+                    if not isinstance(key, str):
+                        raise ValueError(
+                            "Initial mole fraction key must be a string.")
+                    if not isinstance(initial_mole_fraction[key], (int, float)):
+                        raise ValueError(
+                            "Initial mole fraction value must be a number.")
+
+                # ? normalize
+                # check if sum of mole fraction is 1
+                initial_mole_fraction = ReactionAnalyzer.norm_mole_fraction(
+                    initial_mole_fraction)
+
+                # NOTE: convert to mole fraction
+                initial_mole = ReactionAnalyzer.cal_mole(
+                    initial_mole_fraction)
+
+            elif initial_mole is not None:
+                # check if initial mole is valid
+                if not isinstance(initial_mole, dict):
+                    raise ValueError("Initial mole must be a dictionary.")
+
+                # check if initial mole is valid
+                for key in initial_mole:
+                    if not isinstance(key, str):
+                        raise ValueError(
+                            "Initial mole key must be a string.")
+                    if not isinstance(initial_mole[key], (int, float)):
+                        raise ValueError(
+                            "Initial mole value must be a number.")
+
+                # NOTE: convert to mole fraction
+                initial_mole_fraction, _ = ReactionAnalyzer.cal_mole_fraction(
+                    initial_mole)
 
             # SECTION: kwargs
             # eos model
@@ -314,18 +376,28 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 self.overall_reaction_analysis,
             )
 
+            # NOTE: setting up the reaction optimizer
+            # eos model
+            ReactionOptimizer_.eos_model = eos_model
+            # init eos class
+            ReactionOptimizer_.init_eos()
+            # activity model
+            ReactionOptimizer_.activity_model = activity_model
+            # init activity class
+            ReactionOptimizer_.init_activity()
+
             # NOTE: equilibrium constant calculation
             # res
             equilibrium_constant = {}
 
             # loop through each reaction
-            for key, r in self.__reaction_list:
+            for key, r in self.__reaction_list.items():
                 # NOTE: check if reaction is valid
                 if not isinstance(r, Reaction):
                     raise ValueError(
                         f"Invalid reaction object for {key}")
 
-                # NOTE: calculate equilibrium constant at the given temperature
+                # ! calculate equilibrium constant at the given temperature
                 res_ = r.cal_equilibrium_constant(temperature)
 
                 # save
@@ -333,10 +405,11 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
 
             # NOTE: run equilibrium calculation
             res = ReactionOptimizer_.opt_run(
-                initial_mole_fraction=initial_mole_fraction,
-                temperature=temperature,
-                pressure=pressure,
+                initial_mole=initial_mole,
+                temperature=temperature_K,
+                pressure=pressure_bar,
                 equilibrium_constants=equilibrium_constant,
+                reaction_numbers=self.reaction_numbers,
             )
 
             # res

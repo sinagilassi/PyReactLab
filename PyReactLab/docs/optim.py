@@ -19,9 +19,19 @@ class ReactionOptimizer:
     # universal gas constant [J/mol.K]
     R = R_CONST_J__molK
     # temperature [K]
-    T_Ref = TEMPERATURE_REF_K
+    T_Ref_K = TEMPERATURE_REF_K
     # pressure [Pa]
     P_Ref_Pa = PRESSURE_REF_Pa
+    # pressure [bar]
+    P_Ref_bar = 1
+
+    # NOTE: models
+    # eos
+    _eos = None
+    # eos model
+    _eos_model = None
+    # activity model
+    _activity_model = None
 
     def __init__(self,
                  datasource: Dict[str, Any],
@@ -71,25 +81,59 @@ class ReactionOptimizer:
         # NOTE: kwargs
         self.threshold = kwargs.get('threshold', 1e-8)
 
-        # NOTE: init PyThermoModels
-        # eos model
-        self.eos_model = kwargs.get('eos_model', 'SRK')
+    @property
+    def eos(self):
+        '''Get eos class'''
+        return self._eos
+
+    @eos.setter
+    def eos(self, value: str):
+        '''Set eos class'''
+        # set
+        self._eos = value
+
+    @property
+    def eos_model(self):
+        '''Get eos model'''
+        return self._eos_model
+
+    @eos_model.setter
+    def eos_model(self, value: str):
+        '''Set eos model'''
+        # set
+        self._eos_model = value
+
+    def init_eos(self):
+        '''Initialize eos model'''
+        # init model
         self.eos = ptm.eos()
-        # activity model
-        activity_model = kwargs.get('activity_model', 'NRTL')
-        # initialize activity model
+
+    @property
+    def activity_model(self):
+        '''Get activity model'''
+        return self._activity_model
+
+    @activity_model.setter
+    def activity_model(self, value: str):
+        '''Set activity model'''
+        # set
+        self._activity_model = value
+
+    def init_activity(self):
+        '''Initialize activity model'''
+        # init model
         self.activity = ptm.activity(
-            components=self.component_list, model_name=activity_model)
-        # check
-        if activity_model == 'NRTL':
+            components=self.component_list, model_name=self.activity_model)
+
+        if self.activity_model == 'NRTL':
             # nrtl
             self.nrtl = self.activity.nrtl
-        elif activity_model == 'UNIQUAC':
+        elif self.activity_model == 'UNIQUAC':
             # uniquac
             self.uniquac = self.activity.uniquac
         else:
             raise ValueError(
-                f"Invalid activity model: {activity_model}. Must be 'NRTL' or 'UNIQUAC'.")
+                f"Invalid activity model: {self.activity_model}. Must be 'NRTL' or 'UNIQUAC'.")
 
     def unpack_X(self, mol_data_pack: Dict[str, float | int]):
         '''
@@ -220,7 +264,7 @@ class ReactionOptimizer:
                N0s: Dict[str, float],
                P: float,
                T: float,
-               Keq_dict: Dict[str, float],
+               equilibrium_constants: Dict[str, float],
                ):
         '''
         Objective function for optimization
@@ -233,10 +277,10 @@ class ReactionOptimizer:
             initial mole dictionary {key: value}, such as {CO2: 0, H2: 1, CO: 2, H2O: 3, CH3OH: 4}
             parameters
         P : float
-            pressure [Pa]
+            pressure [bar]
         T : float
             temperature [K]
-        Keq_dict : dict
+        equilibrium_constants : dict
             reaction equilibrium constant dictionary calculated at T as: {key: value}, such as {R1: 0.1, R2: 0.2, ...}
 
         Returns
@@ -246,8 +290,8 @@ class ReactionOptimizer:
         '''
         try:
             # NOTE: default values
-            # pressure [Pa]
-            P_ref = self.P_Ref_Pa
+            # pressure [bar]
+            # self.P_Ref_bar
 
             # NOTE: extent of reaction
             EoR = x
@@ -276,96 +320,14 @@ class ReactionOptimizer:
 
             # SECTION: component state analysis
 
-            # SECTION: fugacity coefficient
-            # calculate fugacity coefficient
-            # model input
-            # # component list
-            # comp_list = list(self.component_dict.keys())
-
-            # # feed spec
-            # feed_spec = {}
-            # for comp in comp_list:
-            #     feed_spec[comp] = Xfs_vector[comp_list.index(comp)]
-
-            # # model input
-            # model_input = {
-            #     "eos-model": eos_model,
-            #     "phase": phase,
-            #     "feed-spec": feed_spec,
-            #     "operating-conditions": {
-            #         "pressure": [P, 'Pa'],
-            #         "temperature": [T, 'K'],
-            #     },
-            # }
-
-            # # calculate fugacity coefficient
-            # phis = []
-            # # check
-            # if mode == "non-ideal":
-            #     # fugacity coefficient [-]
-            #     fugacity_res = fugacity_obj.cal_fugacity_coefficient(
-            #         model_input)
-            #     # phii
-            #     _, _, _, phi_pack = fugacity_res
-
-            #     # phis
-            #     phis = {}
-            #     for i, key in enumerate(component_dict.keys()):
-            #         phis[key] = phi_pack['VAPOR'][key]['phi']
-
-            # elif mode == 'ideal':
-            #     phis = {}
-            #     for i, key in enumerate(component_dict.keys()):
-            #         phis[key] = 1
-            # else:
-            #     raise ValueError(
-            #         "Invalid mode. Must be 'ideal' or 'non-ideal'.")
-
             # SECTION: equilibrium equation
             # reaction term
-            reaction_terms = {}
-
-            # NOTE: loop over reactions
-            for i, reaction in enumerate(self.reaction_analysis):
-                # denominator
-                denominator = 1
-                # numerator
-                numerator = 1
-
-                # SECTION: loop over reactants
-                for item in self.reaction_analysis[reaction]['reactants']:
-                    # NOTE: item info
-                    molecule_ = item['molecule']
-                    coefficient_ = item['coefficient']
-                    state_ = item['state']
-
-                    # final mole fraction
-                    Xfs_ = Xfs[molecule_]
-
-                    # update denominator
-                    denominator *= ((Xfs[item['molecule']]
-                                    * (P/P_ref)*(1)))**coefficient_
-
-                # SECTION: loop over products
-                for item in self.reaction_analysis[reaction]['products']:
-                    # NOTE: item info
-                    molecule_ = item['molecule']
-                    coefficient_ = item['coefficient']
-                    state_ = item['state']
-
-                    # final mole fraction
-                    Xfs_ = Xfs[molecule_]
-
-                    # update numerator
-                    numerator *= ((Xfs[item['molecule']]*(P/P_ref)*(phis[item['molecule']]))
-                                  )**item['coefficient']
-
-                # NOTE: update reaction term
-                # reaction_terms[reaction] = (
-                #     numerator/denominator) - equilibrium_data[reaction]
-
-                reaction_terms[reaction] = numerator - \
-                    denominator*Keq_dict[reaction]
+            reaction_terms = self.reaction_equilibrium_equation(
+                Xfs=Xfs,
+                P=P,
+                T=T,
+                equilibrium_constants=equilibrium_constants,
+            )
 
             # SECTION: build objective functions
             obj = 0
@@ -374,8 +336,10 @@ class ReactionOptimizer:
                 # obj = abs(reaction_terms[reaction])
                 # NOTE: method 2
                 # obj += reaction_terms[reaction]**2
+                # NOTE: set
                 obj += reaction_terms[reaction]**2
 
+            # NOTE: define objective function
             # penalty obj
             # obj += 1e-3
 
@@ -385,18 +349,22 @@ class ReactionOptimizer:
             return obj
         except Exception as e:
             raise Exception(
-                f"Error in ReactionOptimizer.equilibrium_reaction_objective_function(): {str(e)}") from e
+                f"Error in objective function: {str(e)}") from e
 
     def reaction_equilibrium_equation(self,
                                       Xfs: Dict[str, float],
                                       P: float,
                                       T: float,
-                                      Keq_dict: Dict[str, float],
-                                      phase: Literal["liquid", "gas"] = "gas",
-                                      gas_mixture: Literal["ideal",
-                                                           "non-ideal"] = "ideal",
-                                      liquid_mixture: Literal["ideal",
-                                                              "non-ideal"] = "ideal",
+                                      equilibrium_constants: Dict[str, float],
+                                      phase: Literal[
+                                          "liquid", "gas"
+                                      ] = "gas",
+                                      gas_mixture: Literal[
+                                          "ideal", "non-ideal"
+                                      ] = "ideal",
+                                      liquid_mixture: Literal[
+                                          "ideal", "non-ideal"
+                                      ] = "ideal",
                                       **kwargs):
         """
         Generate reaction equilibrium equations for gas and liquid phases.
@@ -409,8 +377,9 @@ class ReactionOptimizer:
             Pressure [Pa]
         T : float
             Temperature [K]
-        Keq_dict : dict
-            Reaction equilibrium constant dictionary calculated at T as: {key: value}, such as {R1: 0.1, R2: 0.2, ...}
+        equilibrium_constants : dict
+            Reaction equilibrium constant dictionary calculated at T as: such as {R1: dict, R2: dict, ...},
+            the dict value consists of `value`, `symbol`, `unit`, `temperature`, `reaction`, `method`
         phase : str, optional
             Phase of calculation, by default "gas".
         gas_mixture : str, optional
@@ -457,13 +426,18 @@ class ReactionOptimizer:
         - General theoretical frameworks: Fugacity-based (chemical potential)
         """
         try:
+            # NOTE: default values
+            # pressure [bar]
+            # self.P_Ref_bar
+            # temperature [K]
+            # self.T_Ref_K
 
             # SECTION: fugacity coefficient
             # fugacity coefficient
             fugacity_coeff = {}
 
             # check gas mixture
-            if gas_mixture == "non-ideal":
+            if gas_mixture.lower() == "non-ideal":
                 # NOTE: model input
                 model_input = {
                     "feed-specification": Xfs,
@@ -481,7 +455,7 @@ class ReactionOptimizer:
                 # update
                 fugacity_coeff = {**res_}
 
-            elif gas_mixture == "ideal":
+            elif gas_mixture.lower() == "ideal":
                 # set
                 for i, key in enumerate(self.component_dict.keys()):
                     fugacity_coeff[key] = 1
@@ -494,7 +468,7 @@ class ReactionOptimizer:
             activity_coeff = {}
 
             # check liquid mixture
-            if liquid_mixture == "non-ideal":
+            if liquid_mixture.lower() == "non-ideal":
                 # NOTE: check model name
                 if self.activity_model == 'NRTL':
                     pass
@@ -503,7 +477,7 @@ class ReactionOptimizer:
                 else:
                     raise ValueError(
                         f"Invalid activity model: {self.activity_model}. Must be 'NRTL' or 'UNIQUAC'.")
-            elif liquid_mixture == "ideal":
+            elif liquid_mixture.lower() == "ideal":
                 # set
                 for i, key in enumerate(self.component_dict.keys()):
                     activity_coeff[key] = 1
@@ -534,10 +508,11 @@ class ReactionOptimizer:
 
                     # NOTE: cal
                     # check phase
-                    if state_ == "gas":
+                    if state_ == "g":
                         # set
-                        term_ = Xfs_ * P * fugacity_coeff[molecule_]
-                    elif state_ == "liquid":
+                        term_ = Xfs_ * (P / self.P_Ref_bar) * \
+                            fugacity_coeff[molecule_]
+                    elif state_ == "l":
                         # set
                         # Lewis-Randall/Raoult
                         term_ = Xfs_ * activity_coeff[molecule_]
@@ -560,10 +535,11 @@ class ReactionOptimizer:
 
                     # NOTE: cal
                     # check phase
-                    if state_ == "gas":
+                    if state_ == "g":
                         # set
-                        term_ = Xfs_ * P * fugacity_coeff[molecule_]
-                    elif state_ == "liquid":
+                        term_ = Xfs_ * (P / self.P_Ref_bar) * \
+                            fugacity_coeff[molecule_]
+                    elif state_ == "l":
                         # set
                         term_ = Xfs_ * activity_coeff[molecule_]
                     else:
@@ -574,11 +550,16 @@ class ReactionOptimizer:
                     numerator *= (term_)**coefficient_
 
                 # NOTE: update reaction term
-                # reaction_terms[reaction] = (
-                #     numerator/denominator) - equilibrium_data[reaction]
+                # equilibrium data
+                Keq_ = equilibrium_constants[reaction]['value']
 
-                reaction_terms[reaction] = numerator - \
-                    denominator*Keq_dict[reaction]
+                # ? method 1
+                # reaction_terms[reaction] = (numerator/denominator) - Keq_
+                # ? method 2
+                reaction_terms[reaction] = numerator - denominator*Keq_
+
+            # return
+            return reaction_terms
         except Exception as e:
             raise Exception(
                 f"Error in building the reaction equilibrium equation for {phase}: {str(e)}") from e
@@ -712,17 +693,17 @@ class ReactionOptimizer:
         N0s, comp_list, component_dict, i = params
 
         # build EoR
-        comp_value_list, comp_value_matrix = self.build_EoR(comp_list, x)
+        comp_value_list, comp_value_matrix = self.build_EoR(x)
 
         # extent sun [mol]
         EoR_vector = np.sum(comp_value_matrix, axis=0)
 
         # unpack N0s
-        N0s_list, N0s_vector, N0f = self.unpack_X(N0s, component_dict)
+        N0s_list, N0s_vector, N0f = self.unpack_X(N0s)
 
         # build final X
         Xfs, Xfs_vector, Nf, Nfs_vector = self.build_final_X(
-            component_dict, N0s_vector, EoR_vector)
+            N0s_vector, EoR_vector)
 
         # constraint
         cons = -1*Xfs_vector[i] + 1
@@ -754,17 +735,17 @@ class ReactionOptimizer:
         N0s, comp_list, component_dict, i = params
 
         # build EoR
-        comp_value_list, comp_value_matrix = self.build_EoR(comp_list, x)
+        comp_value_list, comp_value_matrix = self.build_EoR(x)
 
         # extent sun [mol]
         EoR_vector = np.sum(comp_value_matrix, axis=0)
 
         # unpack N0s
-        N0s_list, N0s_vector, N0f = self.unpack_X(N0s, component_dict)
+        N0s_list, N0s_vector, N0f = self.unpack_X(N0s)
 
         # build final X
         Xfs, Xfs_vector, Nf, Nfs_vector = self.build_final_X(
-            component_dict, N0s_vector, EoR_vector)
+            N0s_vector, EoR_vector)
 
         # constraint
         cos = Xfs_vector[i] - 1e-5
@@ -795,17 +776,17 @@ class ReactionOptimizer:
         N0s, comp_list, component_dict, i = params
 
         # build EoR
-        _, comp_value_matrix = self.build_EoR(comp_list, x)
+        _, comp_value_matrix = self.build_EoR(x)
 
         # extent sun [mol]
         EoR_vector = np.sum(comp_value_matrix, axis=0)
 
         # unpack N0s
-        N0s_list, N0s_vector, N0f = self.unpack_X(N0s, component_dict)
+        N0s_list, N0s_vector, N0f = self.unpack_X(N0s)
 
         # build final X
         Xfs, Xfs_vector, Nf, Nfs_vector = self.build_final_X(
-            component_dict, N0s_vector, EoR_vector)
+            N0s_vector, EoR_vector)
 
         # cons
         cons = Nfs_vector[i]
@@ -836,17 +817,17 @@ class ReactionOptimizer:
         N0s, comp_list, component_dict, i = params
 
         # build EoR
-        comp_value_list, comp_value_matrix = self.build_EoR(comp_list, x)
+        comp_value_list, comp_value_matrix = self.build_EoR(x)
 
         # extent sun [mol]
         EoR_vector = np.sum(comp_value_matrix, axis=0)
 
         # unpack N0s
-        N0s_list, N0s_vector, N0f = self.unpack_X(N0s, component_dict)
+        N0s_list, N0s_vector, N0f = self.unpack_X(N0s)
 
         # build final X
         Xfs, Xfs_vector, Nf, Nfs_vector = self.build_final_X(
-            component_dict, N0s_vector, EoR_vector)
+            N0s_vector, EoR_vector)
 
         # cons
         cons = -1*Nfs_vector[i] + N0s_vector[i]
@@ -877,17 +858,17 @@ class ReactionOptimizer:
         N0s, comp_list, component_dict = params
 
         # build EoR
-        comp_value_list, comp_value_matrix = self.build_EoR(comp_list, x)
+        comp_value_list, comp_value_matrix = self.build_EoR(x)
 
         # extent sun [mol]
         EoR_vector = np.sum(comp_value_matrix, axis=0)
 
         # unpack N0s
-        N0s_list, N0s_vector, N0f = self.unpack_X(N0s, component_dict)
+        N0s_list, N0s_vector, N0f = self.unpack_X(N0s)
 
         # build final X
         Xfs, Xfs_vector, Nf, Nfs_vector = self.build_final_X(
-            component_dict, N0s_vector, EoR_vector)
+            N0s_vector, EoR_vector)
 
         # cons
         cons = np.sum(Xfs_vector) - 1
@@ -918,17 +899,17 @@ class ReactionOptimizer:
         N0s, comp_list, component_dict = params
 
         # build EoR
-        comp_value_list, comp_value_matrix = self.build_EoR(comp_list, x)
+        comp_value_list, comp_value_matrix = self.build_EoR(x)
 
         # extent sun [mol]
         EoR_vector = np.sum(comp_value_matrix, axis=0)
 
         # unpack N0s
-        N0s_list, N0s_vector, N0f = self.unpack_X(N0s, component_dict)
+        N0s_list, N0s_vector, N0f = self.unpack_X(N0s)
 
         # build final X
         Xfs, Xfs_vector, Nf, Nfs_vector = self.build_final_X(
-            component_dict, N0s_vector, EoR_vector)
+            N0s_vector, EoR_vector)
 
         # cons
         cons = np.sum(Xfs_vector) - 1
@@ -936,24 +917,27 @@ class ReactionOptimizer:
         return cons
 
     def opt_run(self,
-                initial_mole_fraction: Dict[str, float],
+                initial_mole: Dict[str, float],
                 pressure: float,
                 temperature: float,
                 equilibrium_constants: Dict[str, float],
+                reaction_numbers: int,
                 **kwargs):
         """
         Start optimization process
 
         Parameters
         ----------
-        initial_mole_fraction : dict
-            Initial mole fraction dictionary {key: value}, such as {CO2: 0, H2: 1, CO: 2, H2O: 3, CH3OH: 4}
+        initial_mole : dict
+            Initial mole dictionary {key: value}, such as {CO2: 0, H2: 1, CO: 2, H2O: 3, CH3OH: 4}
         pressure : float
             Pressure [bar]
         temperature : float
             Temperature [K]
         equilibrium_constants : dict
             Reaction equilibrium constant dictionary calculated at T as: {key: value}, such as {R1: 0.1, R2: 0.2, ...}
+        reaction_numbers : int
+            Number of reactions
         kwargs : dict
             Additional parameters for optimization.
 
@@ -965,7 +949,7 @@ class ReactionOptimizer:
         try:
             # NOTE: set
             # initial guess for extent of reaction
-            EOR0 = []
+            EOR0 = np.random.uniform(0, 0.5, reaction_numbers)
 
             # NOTE: bounds
             bound0 = (0, 20)
@@ -984,21 +968,21 @@ class ReactionOptimizer:
                     'type': 'ineq',
                     'fun': self.constraint1,
                     'args': (
-                        (initial_mole_fraction, self.comp_list, self.component_dict, value),)
+                        (initial_mole, self.comp_list, self.component_dict, value),)
                 })
                 # append constraint
                 cons.append({
                     'type': 'ineq',
                     'fun': self.constraint2,
                     'args': (
-                        (initial_mole_fraction, self.comp_list, self.component_dict, value),)
+                        (initial_mole, self.comp_list, self.component_dict, value),)
                 })
                 # append constraint
                 cons.append({
                     'type': 'ineq',
                     'fun': self.constraint3,
                     'args': (
-                        (initial_mole_fraction, self.comp_list, self.component_dict, value),)
+                        (initial_mole, self.comp_list, self.component_dict, value),)
                 })
 
                 # check consumed
@@ -1008,14 +992,14 @@ class ReactionOptimizer:
                         'type': 'ineq',
                         'fun': self.constraint4,
                         'args': (
-                            (initial_mole_fraction, self.comp_list, self.component_dict, value),)
+                            (initial_mole, self.comp_list, self.component_dict, value),)
                     })
 
             # append constraint
             cons.append({
                 'type': 'ineq',
                 'fun': self.constraint5,
-                        'args': ((initial_mole_fraction, self.comp_list, self.component_dict),)
+                        'args': ((initial_mole, self.comp_list, self.component_dict),)
             })
 
             # equality
@@ -1029,7 +1013,7 @@ class ReactionOptimizer:
             # NOTE: optimize
             opt_res = optimize.minimize(fun=self.obj_fn,
                                         x0=EOR0,
-                                        args=(initial_mole_fraction,
+                                        args=(initial_mole,
                                               pressure,
                                               temperature,
                                               equilibrium_constants),

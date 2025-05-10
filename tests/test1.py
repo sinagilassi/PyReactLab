@@ -120,20 +120,31 @@ print(f'K_eq_300: {K_eq_300}')
 res_ = R1.cal_reaction_energy([300.0, "K"])
 print(f'En_rxn: {res_}')
 
+# SECTION: equilibrium calculation
 # NOTE: mole fraction
 mole_fraction = {
-    'CO2': 0.1,
-    'H2': 0.3,
-    'CO': 0.2,
+    'CO2': 1,
+    'H2': 3,
+    'CO': 1,
     'H2O': 0.1,
     'CH3OH': 0.3
 }
 
+mole = {
+    'CO2': 1,
+    'H2': 3,
+    'CO': 1,
+    'H2O': 0.001,
+    'CH3OH': 0.001
+}
+
 # NOTE: input
 inputs = {
-    'mole_fraction': mole_fraction,
-    'temperature': [298.15, "K"],
+    'mole': mole,
+    'temperature': [100, "C"],
     'pressure': [1.0, "bar"],
 }
 
-#
+# equilibrium calculation
+res_ = reaction_system.equilibrium(inputs=inputs)
+print(f'Equilibrium: {res_}')

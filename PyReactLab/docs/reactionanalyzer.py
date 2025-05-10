@@ -666,9 +666,34 @@ class ReactionAnalyzer:
             raise Exception(
                 f"Error in ReactionAnalyzer.vh_shortcut(): {str(e)}") from e
 
-    def calculate_mole_fraction(self, initial_moles):
+    @staticmethod
+    def norm_mole_fraction(mole_fraction: Dict[str, float | int]):
         """
-        Calculate mole fractions from initial moles.
+        Normalize mole fractions (Xf) to sum to 1.
+
+        Parameters
+        ----------
+        mole_fraction : dict
+            Dictionary with species as keys and mole fractions as values.
+
+        Returns
+        -------
+        dict
+            Dictionary with species as keys and normalized mole fractions as values.
+        """
+        # Calculate total mole fraction
+        total_mole_fraction = sum(mole_fraction.values())
+
+        # Normalize mole fraction
+        normalized_mole_fraction = {key: value / total_mole_fraction for key,
+                                    value in mole_fraction.items()}
+
+        return normalized_mole_fraction
+
+    @staticmethod
+    def cal_mole_fraction(initial_moles: Dict[str, float | int]):
+        """
+        Calculate mole fractions (Xf) from initial moles.
 
         Parameters
         ----------
@@ -693,3 +718,27 @@ class ReactionAnalyzer:
         total_mole_fraction = sum(mole_fraction.values())
 
         return mole_fraction, total_mole_fraction
+
+    @staticmethod
+    def cal_mole(initial_mole_fraction: Dict[str, float | int]):
+        """
+        Calculate the initial moles (Xi) of each species in a reaction system.
+
+        Parameters
+        ----------
+        initial_mole_fraction : dict
+            Dictionary with species as keys and initial mole fractions as values.
+
+        Returns
+        -------
+        dict
+            Dictionary with species as keys and initial moles as values.
+        """
+        # Calculate total mole
+        total_mole = sum(initial_mole_fraction.values())
+
+        # Calculate initial moles
+        initial_moles = {key: value * total_mole for key,
+                         value in initial_mole_fraction.items()}
+
+        return initial_moles
