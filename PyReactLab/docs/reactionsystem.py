@@ -6,6 +6,7 @@ from .reaction import Reaction
 from .thermolinkdb import ThermoLinkDB
 from .refmanager import ReferenceManager
 from .reactionanalyzer import ReactionAnalyzer
+from .optim import ReactionOptimizer
 from ..utils import ChemReactUtils
 from .reaction import Reaction
 
@@ -108,6 +109,9 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 # set
                 self.__reaction_list[name] = r_
 
+            # NOTE: reaction numbers
+            # self.reaction_numbers = len(reaction_res)
+
             # SECTION: analyze overall reaction
             # ! to set consumed, produced, and intermediate species
             res_0 = ChemReactUtils_.analyze_overall_reactions(
@@ -121,7 +125,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
 
             # SECTION: energy analysis
             # energy analysis result list
-            energy_analysis_res_list = {}
+            energy_analysis = {}
 
             # loop through each reaction
             for item in reaction_res:
@@ -130,12 +134,13 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
 
                 # NOTE: energy analysis
                 reaction_ = self.__reaction_list[name]
-                _res = reaction_.energy_analysis_result
+                _res = reaction_.energy_analysis
 
                 # save
-                energy_analysis_res_list[item] = _res
+                energy_analysis[item] = _res
 
             # NOTE: set primary analysis result
+            self.reaction_numbers = len(reaction_res)
             self.reaction_analysis = reaction_res
             self.overall_reaction_analysis = res_0
             self.reaction_states = None
@@ -143,19 +148,19 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             self.component_dict = component_dict  # ? dict of component: id
             self.coeff_list_dict = comp_list  # ? list of dict of component: coeff
             self.coeff_list_list = comp_coeff  # ? list of list of component coeff
-            self.energy_analysis_res_list = energy_analysis_res_list
+            self.energy_analysis = energy_analysis
 
         except Exception as e:
             raise Exception(
                 f"Error in ReactionSystem.go(): {str(e)}") from e
 
-    def cal_reaction_equilibrium_constant(self,
-                                          reaction_name: str,
-                                          temperature: list[float | str],
-                                          method: Literal[
-                                              "van't Hoff", "shortcut van't Hoff"
-                                          ] = "van't Hoff",
-                                          ):
+    def reaction_equilibrium_constant(self,
+                                      reaction_name: str,
+                                      temperature: list[float | str],
+                                      method: Literal[
+                                          "van't Hoff", "shortcut van't Hoff"
+                                      ] = "van't Hoff",
+                                      ):
         """
         Calculate the equilibrium constant at a given temperature using the van't Hoff equation.
 
@@ -210,3 +215,133 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
         except Exception as e:
             raise Exception(
                 f"Error in ReactionSystem.equilibrium_constant_at_temperature(): {str(e)}") from e
+
+    def equilibrium(self,
+                    initial_mole_fraction: Dict[str, float],
+                    temperature: list[float | str],
+                    pressure: list[float | str],
+                    gas_mixture: Literal["ideal",
+                                         "non-ideal"] = "ideal",
+                    liquid_mixture: Literal["ideal",
+                                            "non-ideal"] = "ideal",
+                    **kwargs):
+        """
+        Calculate the equilibrium state of the reaction system.
+
+        Parameters
+        ----------
+        initial_mole_fraction : dict
+            Initial mole fraction of the components.
+        temperature : list
+            Temperature in the form of [value, unit], the unit is automatically converted to K.
+        pressure : list
+            Pressure in the form of [value, unit], the unit is automatically converted to bar.
+        **kwargs : dict
+            Additional arguments for the calculation.
+                - eos_model: Equation of state model to use for the calculation. Options are "SRK" or "PR".
+                - activity_model: Activity model to use for the calculation. Options are "NRTL" or "UNIFAC".
+
+        Returns
+        -------
+        dict
+            Equilibrium state of the reaction system.
+
+        Notes
+        -----
+        The fugacity ratio term in the equilibrium constant is calculated as:
+        - gas phase
+        """
+        try:
+            # SECTION: check args
+            # NOTE: check if temperature is valid
+            if not isinstance(temperature, list):
+                raise ValueError("Temperature must be a number.")
+
+            # check if temperature is valid
+            if len(temperature) != 2:
+                raise ValueError(
+                    "Temperature must be a list of length 2 following [value, unit].")
+
+            if not isinstance(temperature[0], (int, float)):
+                raise ValueError("Temperature must be a number.")
+
+            if not isinstance(temperature[1], str):
+                raise ValueError("Temperature unit must be a string.")
+
+            # NOTE: check if pressure is valid
+            if not isinstance(pressure, list):
+                raise ValueError("Pressure must be a number.")
+
+            # check if pressure is valid
+            if len(pressure) != 2:
+                raise ValueError(
+                    "Pressure must be a list of length 2 following [value, unit].")
+
+            if not isinstance(pressure[0], (int, float)):
+                raise ValueError("Pressure must be a number.")
+
+            if not isinstance(pressure[1], str):
+                raise ValueError("Pressure unit must be a string.")
+
+            # NOTE: check if initial mole fraction is valid
+            if not isinstance(initial_mole_fraction, dict):
+                raise ValueError(
+                    "Initial mole fraction must be a dictionary.")
+
+            # check if initial mole fraction is valid
+            for key in initial_mole_fraction:
+                if not isinstance(key, str):
+                    raise ValueError(
+                        "Initial mole fraction key must be a string.")
+                if not isinstance(initial_mole_fraction[key], (int, float)):
+                    raise ValueError(
+                        "Initial mole fraction value must be a number.")
+
+            # SECTION: kwargs
+            # eos model
+            eos_model = kwargs.get("eos_model", "SRK")
+
+            # activity model
+            activity_model = kwargs.get("activity_model", "NRTL")
+
+            # SECTION: init
+            ReactionOptimizer_ = ReactionOptimizer(
+                self.datasource,
+                self.equationsource,
+                self.component_dict,
+                self.coeff_list_dict,
+                self.reaction_analysis,
+                self.overall_reaction_analysis,
+            )
+
+            # NOTE: equilibrium constant calculation
+            # res
+            equilibrium_constant = {}
+
+            # loop through each reaction
+            for key, r in self.__reaction_list:
+                # NOTE: check if reaction is valid
+                if not isinstance(r, Reaction):
+                    raise ValueError(
+                        f"Invalid reaction object for {key}")
+
+                # NOTE: calculate equilibrium constant at the given temperature
+                res_ = r.cal_equilibrium_constant(temperature)
+
+                # save
+                equilibrium_constant[key] = res_
+
+            # NOTE: run equilibrium calculation
+            res = ReactionOptimizer_.opt_run(
+                initial_mole_fraction=initial_mole_fraction,
+                temperature=temperature,
+                pressure=pressure,
+                equilibrium_constants=equilibrium_constant,
+            )
+
+            # res
+            return res
+
+        except Exception as e:
+            raise Exception(
+                f"Failing in the equilibrium calculations {str(e)}") from e

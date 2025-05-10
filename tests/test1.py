@@ -94,7 +94,7 @@ reaction_system = prl.create_rxn(
 )
 
 # Keq at T
-res_ = reaction_system.cal_reaction_equilibrium_constant(
+res_ = reaction_system.reaction_equilibrium_constant(
     'Methanol Formation by CO2-Hydrogenation',
     [300.0, "K"]
 )
@@ -129,9 +129,11 @@ mole_fraction = {
     'CH3OH': 0.3
 }
 
-# NOTE: model input
-model_inputs = {
+# NOTE: input
+inputs = {
     'mole_fraction': mole_fraction,
     'temperature': [298.15, "K"],
     'pressure': [1.0, "bar"],
 }
+
+#

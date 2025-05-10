@@ -81,7 +81,7 @@ class Reaction():
             # set input
             _input = {**reaction_res, **_res_0}
 
-            energy_analysis_result = self.ReactionAnalyzer_.energy_analysis(
+            energy_analysis = self.ReactionAnalyzer_.energy_analysis(
                 self.datasource,
                 self.equationsource,
                 _input)
@@ -93,15 +93,21 @@ class Reaction():
             self.products = _res_0['products']
             self.reaction_coefficient = _res_0['reaction_coefficient']
             self.carbon_count = _res_0['carbon_count']
-            self.energy_analysis_result = energy_analysis_result
+            self.energy_analysis = energy_analysis
             # extract
-            self.gibbs_free_energy_of_formation_std = energy_analysis_result[
+            self.gibbs_free_energy_of_formation_std = energy_analysis[
                 GIBBS_FREE_ENERGY_OF_FORMATION_STD]
-            self.enthalpy_of_formation_std = energy_analysis_result[ENTHALPY_OF_FORMATION_STD]
-            self.gibbs_free_energy_of_reaction_std = energy_analysis_result[
+            self.enthalpy_of_formation_std = energy_analysis[
+                ENTHALPY_OF_FORMATION_STD
+            ]
+            self.gibbs_free_energy_of_reaction_std = energy_analysis[
                 GIBBS_FREE_ENERGY_OF_REACTION_STD]
-            self.enthalpy_of_reaction_std = energy_analysis_result[ENTHALPY_OF_REACTION_STD]
-            self.equilibrium_constant_std = energy_analysis_result[EQUILIBRIUM_CONSTANT_STD]
+            self.enthalpy_of_reaction_std = energy_analysis[
+                ENTHALPY_OF_REACTION_STD
+            ]
+            self.equilibrium_constant_std = energy_analysis[
+                EQUILIBRIUM_CONSTANT_STD
+            ]
 
             # reaction analysis result
             self.reaction_analysis_result = {
@@ -111,12 +117,36 @@ class Reaction():
                 'products': _res_0['products'],
                 'reaction_coefficient': _res_0['reaction_coefficient'],
                 'carbon_count': _res_0['carbon_count'],
-                'energy_analysis_result': energy_analysis_result
+                'energy_analysis': energy_analysis
             }
 
         except Exception as e:
             raise Exception(
                 f"Error in ReactionSystem.go(): {str(e)}") from e
+
+    def check_state(self):
+        """
+        Check the state of the reaction system whether it is a liquid, gas, aqueous, or solid or a combination of them.
+        """
+        try:
+            # NOTE: set state
+            states = []
+
+            # looping through reactants and products
+            for reactant in self.reactants:
+                _res = reactant['state']
+                # ? add state
+                states.append(_res)
+            for product in self.products:
+                _res = product['state']
+                # ? add state
+                states.append(_res)
+
+            # NOTE: remove duplicates
+            states = list(set(states))
+        except Exception as e:
+            raise Exception(
+                f"Failing in finding the reaction state: {str(e)}") from e
 
     def cal_equilibrium_constant(self,
                                  temperature: List[float | str],
