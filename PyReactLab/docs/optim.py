@@ -4,6 +4,7 @@ import numpy as np
 from math import sqrt, pow, exp
 from scipy import optimize
 import pyThermoModels as ptm
+from scipy.optimize import Bounds, NonlinearConstraint
 # local
 from ..configs import (
     R_CONST_J__molK, DATASOURCE, EQUATIONSOURCE,
@@ -38,6 +39,7 @@ class ReactionOptimizer:
                  equationsource: Dict[str, Any],
                  component_dict: Dict[str, float | int],
                  comp_list: List[Dict[str, float | int]],
+                 stoichiometric_coeff: np.ndarray,
                  reaction_analysis: Dict,
                  overall_reaction_analysis: Dict,
                  **kwargs):
@@ -69,6 +71,8 @@ class ReactionOptimizer:
         self.component_dict = component_dict
         # set component list
         self.comp_list = comp_list
+        # set stoichiometric coefficient
+        self.stoichiometric_coeff = stoichiometric_coeff
         # set reaction analysis
         self.reaction_analysis = reaction_analysis
         # set overall reaction analysis
@@ -917,7 +921,8 @@ class ReactionOptimizer:
         return cons
 
     def opt_run(self,
-                initial_mole: Dict[str, float],
+                initial_mole: Dict[str, float | int],
+                initial_mole_fraction: Dict[str, float | int],
                 pressure: float,
                 temperature: float,
                 equilibrium_constants: Dict[str, float],
@@ -930,6 +935,8 @@ class ReactionOptimizer:
         ----------
         initial_mole : dict
             Initial mole dictionary {key: value}, such as {CO2: 0, H2: 1, CO: 2, H2O: 3, CH3OH: 4}
+        initial_mole_fraction : dict
+            Initial mole fraction dictionary {key: value}, such as {CO2: 0, H2: 1, CO: 2, H2O: 3, CH3OH: 4}
         pressure : float
             Pressure [bar]
         temperature : float
@@ -956,6 +963,17 @@ class ReactionOptimizer:
             bounds = []
             for i in range(len(EOR0)):
                 bounds.append(bound0)
+
+            # EOR02
+            # initial mole
+            initial_mole_ = np.array(list(initial_mole.values()))
+
+            # extent of reaction (EoR)
+            EOR0_Bounds, EOR0_bounds = self.compute_bounds(
+                nu=self.stoichiometric_coeff,
+                n0=initial_mole_,
+                fallback=10
+            )
 
             # NOTE: define constraint
             cons = []
@@ -1075,3 +1093,66 @@ class ReactionOptimizer:
             Nfs[key] = Nfs_vector[value]
 
         return Xfs, Xfs_vector, Nf, Nfs_vector, Nfs
+
+    def compute_bounds(self,
+                       nu: np.ndarray,
+                       n0: np.ndarray,
+                       fallback: float = 10):
+        """
+        Computes lower and upper bounds for each reaction extent ξ_j.
+
+        Parameters
+        ----------
+        nu: np.ndarray
+            The stoichiometric matrix (n_species x n_reactions)
+        N0s: np.ndarray
+            Initial moles of each species (length: n_species)
+        fallback: float
+            Fallback upper bound when no limiting reactant is present.
+
+        Returns
+        -------
+        Bounds
+            scipy.optimize.Bounds object for use in minimize/least_squares.
+        """
+        try:
+            # SECTION: Check if nu is a 2D array
+            if nu.ndim != 2:
+                raise ValueError("nu must be a 2D array.")
+            # Check if n0 is a 1D array
+            if n0.ndim != 1:
+                raise ValueError("n0 must be a 1D array.")
+
+            # NOTE: Check if nu and n0 have compatible dimensions
+            if nu.shape[0] != n0.shape[0]:
+                raise ValueError("nu and n0 must have compatible dimensions.")
+
+            # NOTE: set fallback
+            fallback = max(n0.sum(), 1.0) * 10  # 10× total initial mol
+
+            # SECTION: Compute bounds
+            n_species, n_reactions = nu.shape
+            lb = np.zeros(n_reactions)
+            ub = np.full(n_reactions, np.inf)
+
+            # Loop over reactions
+            for j in range(n_reactions):
+                for i in range(n_species):
+                    v = nu[i, j]
+                    if v < 0:
+                        if n0[i] > 0:
+                            max_mu = n0[i] / abs(v)
+                            ub[j] = min(ub[j], max_mu)
+                        else:
+                            # No initial amount of a required reactant → can't proceed
+                            ub[j] = min(ub[j], fallback)
+
+            # NOTE: convert to bounds list
+            bounds = []
+            for i in range(len(lb)):
+                bounds.append((lb[i], ub[i]))
+
+            return Bounds(lb, ub), bounds
+        except Exception as e:
+            raise Exception(
+                f"Error in computing bounds: {str(e)}") from e

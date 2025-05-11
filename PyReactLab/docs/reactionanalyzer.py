@@ -742,3 +742,63 @@ class ReactionAnalyzer:
                          value in initial_mole_fraction.items()}
 
         return initial_moles
+
+    @staticmethod
+    def set_stream(component_dict: Dict[str, int | float],
+                   mole: Dict[str, int | float],
+                   mole_fraction: Dict[str, int | float]):
+        """
+        Set the stream of components in a reaction system.
+
+        Parameters
+        ----------
+        component_dict : dict
+            Dictionary with species as keys and their properties as values.
+        mole : dict
+            Dictionary with species as keys and their moles as values.
+        mole_fraction : dict
+            Dictionary with species as keys and their mole fractions as values.
+
+        Returns
+        -------
+        tuple
+            Tuple containing:
+            - mole_comp_std : dict
+                Dictionary with species as keys and their moles as values.
+            - mole_fraction_comp_std : dict
+                Dictionary with species as keys and their mole fractions as values.
+            - mole_std : list
+                List of moles of each species.
+            - mole_fraction_std : list
+                List of mole fractions of each species.
+        """
+        try:
+            # NOTE: check if mole and mole_fraction are empty
+            if not mole and not mole_fraction:
+                raise ValueError("Both mole and mole_fraction are empty.")
+
+            # NOTE: standardize mole and mole_fraction
+            mole_std = []
+            mole_comp_std = {}
+            mole_fraction_std = []
+            mole_fraction_comp_std = {}
+
+            # NOTE: Set the stream of components
+            # loop through the component_dict (id)
+            for key, value in component_dict.items():
+                # retrieve mole and mole_fraction
+                _mole = mole[key]
+                _mole_fraction = mole_fraction[key]
+
+                # NOTE: standardize
+                # ? mole
+                mole_comp_std[key] = _mole
+                mole_std.append(_mole)
+                # ? mole fraction
+                mole_fraction_comp_std[key] = _mole_fraction
+                mole_fraction_std.append(_mole_fraction)
+
+            # return
+            return mole_comp_std, mole_fraction_comp_std, mole_std, mole_fraction_std
+        except Exception as e:
+            raise Exception(f"Failed to set stream: {str(e)}") from e

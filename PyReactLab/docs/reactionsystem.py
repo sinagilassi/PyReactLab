@@ -1,4 +1,5 @@
 # import libs
+import numpy as np
 from typing import Dict, Any, List, Literal, Optional
 import pycuc
 # local
@@ -121,7 +122,14 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             res_1 = ChemReactUtils_.define_component_id(
                 reaction_res)
             # extract
+            # ? component_list: list of components
+            # ? component_dict: dict of component: id
+            # ? comp_list: list of dict of component stoichiometry
+            # ? comp_coeff: list of list of component stoichiometry
             component_list, component_dict, comp_list, comp_coeff = res_1
+
+            # set stoichiometry transpose
+            comp_coeff_t = np.array(comp_coeff).T
 
             # SECTION: energy analysis
             # energy analysis result list
@@ -144,10 +152,11 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             self.reaction_analysis = reaction_res
             self.overall_reaction_analysis = res_0
             self.reaction_states = None
-            self.component_list = component_list  # ? list of components
-            self.component_dict = component_dict  # ? dict of component: id
-            self.coeff_list_dict = comp_list  # ? list of dict of component: coeff
-            self.coeff_list_list = comp_coeff  # ? list of list of component coeff
+            self.component_list = component_list
+            self.component_dict = component_dict
+            self.coeff_list_dict = comp_list
+            self.coeff_list_list = comp_coeff
+            self.coeff_T_list_list = comp_coeff_t
             self.energy_analysis = energy_analysis
 
         except Exception as e:
@@ -359,6 +368,13 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 initial_mole_fraction, _ = ReactionAnalyzer.cal_mole_fraction(
                     initial_mole)
 
+            # NOTE: build mole and mole fraction matrix regarding the component dict
+            initial_mole_std, initial_mole_fraction_std, _, _ = ReactionAnalyzer.set_stream(
+                component_dict=self.component_dict,
+                mole=initial_mole,
+                mole_fraction=initial_mole_fraction,
+            )
+
             # SECTION: kwargs
             # eos model
             eos_model = kwargs.get("eos_model", "SRK")
@@ -372,6 +388,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 self.equationsource,
                 self.component_dict,
                 self.coeff_list_dict,
+                self.coeff_T_list_list,
                 self.reaction_analysis,
                 self.overall_reaction_analysis,
             )
@@ -405,7 +422,8 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
 
             # NOTE: run equilibrium calculation
             res = ReactionOptimizer_.opt_run(
-                initial_mole=initial_mole,
+                initial_mole=initial_mole_std,
+                initial_mole_fraction=initial_mole_fraction_std,
                 temperature=temperature_K,
                 pressure=pressure_bar,
                 equilibrium_constants=equilibrium_constant,
