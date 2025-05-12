@@ -1,7 +1,7 @@
 # import packages/modules
 from typing import Dict, List, Literal, Optional, Any
 import numpy as np
-from math import sqrt, pow, exp
+from math import sqrt, pow, exp, log
 from scipy import optimize
 import pyThermoModels as ptm
 from scipy.optimize import Bounds, NonlinearConstraint
@@ -199,7 +199,8 @@ class ReactionOptimizer:
             comp_value_list = []
             # new
             comp_list_updated = []
-            # copy data
+
+            # ! looping through reactions
             for i, item in enumerate(self.comp_list):
                 _item = {}
                 for key, value in item.items():
@@ -348,7 +349,7 @@ class ReactionOptimizer:
             # obj += 1e-3
 
             # sqrt
-            obj = sqrt(obj)
+            # obj = sqrt(obj)
 
             return obj
         except Exception as e:
@@ -560,7 +561,11 @@ class ReactionOptimizer:
                 # ? method 1
                 # reaction_terms[reaction] = (numerator/denominator) - Keq_
                 # ? method 2
-                reaction_terms[reaction] = numerator - denominator*Keq_
+                # reaction_terms[reaction] = numerator - denominator*Keq_
+                # ? method 3
+                Q_i = numerator / denominator
+                Q_i_safe = np.clip(Q_i, 1e-12, None)
+                reaction_terms[reaction] = log(Q_i_safe) - log(Keq_)
 
             # return
             return reaction_terms
@@ -969,12 +974,56 @@ class ReactionOptimizer:
             initial_mole_ = np.array(list(initial_mole.values()))
 
             # extent of reaction (EoR)
-            EOR0_Bounds, EOR0_bounds = self.compute_bounds(
+            EOR0_Bounds, EOR0_bounds, EoR_initial = self.compute_bounds(
                 nu=self.stoichiometric_coeff,
-                n0=initial_mole_,
-                fallback=10
+                n0=initial_mole_
             )
 
+            # NOTE: constraints
+            # constraints 1
+            cons1 = self.constraints_collection_1(initial_mole)
+            # constraints 2
+            cons2 = self.constraints_collection_2(
+                nu=self.stoichiometric_coeff,
+                n0=initial_mole_,
+                include_mole_fraction_constraint=True
+            )
+
+            # set constraints
+            cons = []
+
+            # NOTE: optimize
+            opt_res = optimize.minimize(fun=self.obj_fn,
+                                        x0=EOR0,
+                                        args=(initial_mole,
+                                              pressure,
+                                              temperature,
+                                              equilibrium_constants),
+                                        method='SLSQP',
+                                        bounds=EOR0_bounds,
+                                        constraints=cons1,
+                                        options={
+                                            'disp': True,
+                                            'ftol': 1e-12,
+                                            'maxiter': 1000
+                                        })
+
+            # save
+            return opt_res
+        except Exception as e:
+            raise Exception(
+                f"Error in the optimization process: {str(e)}") from e
+
+    def constraints_collection_1(self, initial_mole: Dict[str, float | int]):
+        """
+        Generate a collection of constraints for optimization.
+
+        Parameters
+        ----------
+        initial_mole : Dict[str, float | int]
+            Initial mole dictionary {key: value}, such as {CO2: 0, H2: 1, CO: 2, H2O: 3, CH3OH: 4}
+        """
+        try:
             # NOTE: define constraint
             cons = []
 
@@ -1028,27 +1077,52 @@ class ReactionOptimizer:
             # 'args':((N0s, comp_list,component_dict),)
             # })
 
-            # NOTE: optimize
-            opt_res = optimize.minimize(fun=self.obj_fn,
-                                        x0=EOR0,
-                                        args=(initial_mole,
-                                              pressure,
-                                              temperature,
-                                              equilibrium_constants),
-                                        method='SLSQP',
-                                        bounds=bounds,
-                                        constraints=cons,
-                                        options={
-                                            'disp': True,
-                                            'ftol': 1e-12,
-                                            'maxiter': 1000
-                                        })
-
-            # save
-            return opt_res
+            # return
+            return cons
         except Exception as e:
             raise Exception(
-                f"Error in the optimization process: {str(e)}") from e
+                f"Error in generating constraints collection: {str(e)}") from e
+
+    def constraints_collection_2(self,
+                                 nu,
+                                 n0,
+                                 include_mole_fraction_constraint=True):
+        """
+        Generate a collection of constraints for optimization.
+
+        Parameters
+        ----------
+        initial_mole : Dict[str, float | int]
+            Initial mole dictionary {key: value}, such as {CO2: 0, H2: 1, CO: 2, H2O: 3, CH3OH: 4}
+        """
+        try:
+            n_species, n_reactions = nu.shape
+            constraints = []
+
+            # 1. Species non-negativity constraints
+            for i in range(n_species):
+                def make_fn(i):
+                    return lambda ksi: n0[i] + np.dot(nu[i, :], ksi)
+                constraints.append(NonlinearConstraint(make_fn(i), 0, np.inf))
+
+            # 2. Mole fraction sum constraint (optional)
+            if include_mole_fraction_constraint:
+                def mole_fraction_sum(ksi):
+                    n = n0 + nu @ ksi
+                    total = np.sum(n)
+                    # avoid division by zero if total is very small
+                    if total <= 1e-12:
+                        return 0.0
+                    y = n / total
+                    return np.sum(y)
+
+                constraints.append(NonlinearConstraint(
+                    mole_fraction_sum, 1.0, 1.0))
+
+            return constraints
+        except Exception as e:
+            raise Exception(
+                f"Error in generating constraints collection: {str(e)}") from e
 
     def process_optimization_results(self,
                                      res,
@@ -1097,7 +1171,9 @@ class ReactionOptimizer:
     def compute_bounds(self,
                        nu: np.ndarray,
                        n0: np.ndarray,
-                       fallback: float = 10):
+                       fallback: Optional[float] = None,
+                       scale: float = 10.0,
+                       bound_scale: float = 0.5):
         """
         Computes lower and upper bounds for each reaction extent ξ_j.
 
@@ -1109,6 +1185,10 @@ class ReactionOptimizer:
             Initial moles of each species (length: n_species)
         fallback: float
             Fallback upper bound when no limiting reactant is present.
+        scale: float
+            Scale factor for the fallback value.
+        slack: float
+            Slack value for the bounds.
 
         Returns
         -------
@@ -1128,7 +1208,8 @@ class ReactionOptimizer:
                 raise ValueError("nu and n0 must have compatible dimensions.")
 
             # NOTE: set fallback
-            fallback = max(n0.sum(), 1.0) * 10  # 10× total initial mol
+            if fallback is None:
+                fallback = max(n0.sum(), 1.0) * scale  # 10× total initial mol
 
             # SECTION: Compute bounds
             n_species, n_reactions = nu.shape
@@ -1150,9 +1231,23 @@ class ReactionOptimizer:
             # NOTE: convert to bounds list
             bounds = []
             for i in range(len(lb)):
+                # add slack to the upper bound
+                ub[i] = ub[i]
                 bounds.append((lb[i], ub[i]))
 
-            return Bounds(lb, ub), bounds
+            # NOTE: initial guess
+            EOR0 = []
+            for i in range(len(ub)):
+                # check if upper bound is finite
+                if ub[i] == scale:
+                    # set
+                    _val = lb[i] + bound_scale * (ub[i] - lb[i])
+                    EOR0.append(_val)
+                else:
+                    # set
+                    EOR0.append(np.random.uniform(lb[i], ub[i]))
+
+            return Bounds(lb, ub), bounds, EOR0
         except Exception as e:
             raise Exception(
                 f"Error in computing bounds: {str(e)}") from e
