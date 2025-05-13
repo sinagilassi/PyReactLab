@@ -802,3 +802,53 @@ class ReactionAnalyzer:
             return mole_comp_std, mole_fraction_comp_std, mole_std, mole_fraction_std
         except Exception as e:
             raise Exception(f"Failed to set stream: {str(e)}") from e
+
+    @staticmethod
+    def cal_conversion(
+            initial_mole: Dict[str, float | int],
+            final_mole: Dict[str, float | int],
+            components: List[str]):
+        '''
+        Calculate conversion
+
+        Parameters
+        ----------
+        initial_mole : dict
+            Initial moles of each component.
+        final_mole : dict
+            Final moles of each component.
+        components : list
+            List of components to calculate conversion for.
+
+        Returns
+        -------
+
+        '''
+        try:
+            # check if N0s and Nfs are empty
+            if not initial_mole and not final_mole:
+                raise ValueError("Both N0s and Nfs are empty.")
+
+            # check if components is empty
+            if not components:
+                raise ValueError("Components list is empty.")
+
+            # NOTE: calculate conversion
+            # results
+            conversion = {}
+
+            # loop through the component_item
+            for component in components:
+                # initial mole
+                _N0i = initial_mole[component]
+                # final mole
+                _Nfi = final_mole[component]
+                # conversion
+                conversion[component] = {
+                    'value': ((_N0i - _Nfi)/_N0i)*100,
+                    'unit': '%'
+                }
+
+            return conversion
+        except Exception as e:
+            raise Exception(f"Failed to calculate conversion: {str(e)}") from e

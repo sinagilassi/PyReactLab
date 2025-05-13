@@ -141,10 +141,13 @@ mole = {
 # NOTE: input
 inputs = {
     'mole': mole,
-    'temperature': [200, "C"],
+    'temperature': [100, "C"],
     'pressure': [1.0, "bar"],
 }
 
 # equilibrium calculation
-res_ = reaction_system.equilibrium(inputs=inputs, method='minimize')
+res_ = reaction_system.equilibrium(
+    inputs=inputs,
+    conversion=['CO2'],
+    method='minimize')
 print(f'Equilibrium: {res_}')

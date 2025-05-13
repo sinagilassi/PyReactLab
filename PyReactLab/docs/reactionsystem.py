@@ -228,6 +228,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
 
     def equilibrium(self,
                     inputs: Dict[str, Any],
+                    conversion: Optional[List[str]] = None,
                     gas_mixture: Literal[
                         "ideal", "non-ideal"
                     ] = "ideal",
@@ -243,6 +244,8 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
         ----------
         inputs : dict
             Inputs for the equilibrium calculation.
+        conversion : list, optional
+            List of components to calculate conversion for, by default None.
         gas_mixture : str, optional
             Type of gas mixture, by default "ideal".
         liquid_mixture : str, optional
@@ -457,6 +460,29 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                     EoR=EoR,
                 )
 
+                # NOTE: calculate conversion
+                # res
+                conversion_res = None
+                # conversion
+                if conversion is not None:
+                    # check list
+                    if not isinstance(conversion, list):
+                        raise ValueError(
+                            "Conversion must be a list of strings.")
+
+                    # check component in the components
+                    for key in conversion:
+                        if key not in self.component_dict:
+                            raise ValueError(
+                                f"Invalid component: {key} in the components.")
+
+                    # calculate conversion
+                    conversion_res = ReactionAnalyzer.cal_conversion(
+                        initial_mole=initial_mole_std,
+                        final_mole=Eq_Nfs,
+                        components=conversion,
+                    )
+
                 # SECTION: set results
                 # initial feed
                 res['feed'] = {
@@ -522,6 +548,10 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                     "value": opt_res.fun,
                     "unit": "dimensionless"
                 }
+
+                # conversion
+                if conversion_res is not None:
+                    res['conversion'] = conversion_res
 
             # NOTE: set time
             # ! Stop timing
