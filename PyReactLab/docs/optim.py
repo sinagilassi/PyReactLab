@@ -270,6 +270,7 @@ class ReactionOptimizer:
                P: float,
                T: float,
                equilibrium_constants: Dict[str, float],
+               method: Literal['minimize', 'least_squares'],
                ):
         '''
         Objective function for optimization
@@ -287,11 +288,13 @@ class ReactionOptimizer:
             temperature [K]
         equilibrium_constants : dict
             reaction equilibrium constant dictionary calculated at T as: {key: value}, such as {R1: 0.1, R2: 0.2, ...}
+        method : str
+            optimization method.
 
         Returns
         -------
-        obj : float
-            objective function
+        obj : float | list
+            objective function, if method is 'minimize' return float, if method is 'least_squares' return list
         '''
         try:
             # NOTE: default values
@@ -335,21 +338,39 @@ class ReactionOptimizer:
             )
 
             # SECTION: build objective functions
-            obj = 0
-            for i, reaction in enumerate(self.reaction_analysis):
-                # NOTE: method 1
-                # obj = abs(reaction_terms[reaction])
-                # NOTE: method 2
-                # obj += reaction_terms[reaction]**2
+            if method == 'minimize':
+                obj = 0
+                for i, reaction in enumerate(self.reaction_analysis):
+                    # NOTE: method 1
+                    # obj = abs(reaction_terms[reaction])
+                    # NOTE: method 2
+                    # obj += reaction_terms[reaction]**2
+                    # NOTE: set
+                    obj += reaction_terms[reaction]**2
+
+                # NOTE: define objective function
+                # penalty obj
+                # obj += 1e-3
+
+                # sqrt
+                # obj = sqrt(obj)
+            elif method == 'least_squares':
                 # NOTE: set
-                obj += reaction_terms[reaction]**2
+                obj = []
+                for i, reaction in enumerate(self.reaction_analysis):
+                    # NOTE: method 1
+                    # obj.append(reaction_terms[reaction])
+                    # NOTE: method 2
+                    # obj.append(reaction_terms[reaction]**2)
+                    # NOTE: set
+                    obj.append(reaction_terms[reaction])
 
-            # NOTE: define objective function
-            # penalty obj
-            # obj += 1e-3
-
-            # sqrt
-            # obj = sqrt(obj)
+                # NOTE: mole fraction constraints
+                Xfs_sum = np.sum(Xfs_vector)
+                obj.append(Xfs_sum - 1)
+            else:
+                raise ValueError(
+                    f"Invalid optimization method: {method}. Must be 'minimize' or 'least_squares'.")
 
             return obj
         except Exception as e:
@@ -932,6 +953,7 @@ class ReactionOptimizer:
                 temperature: float,
                 equilibrium_constants: Dict[str, float],
                 reaction_numbers: int,
+                method: Literal['minimize', 'least_squares'] = 'minimize',
                 **kwargs):
         """
         Start optimization process
@@ -950,8 +972,15 @@ class ReactionOptimizer:
             Reaction equilibrium constant dictionary calculated at T as: {key: value}, such as {R1: 0.1, R2: 0.2, ...}
         reaction_numbers : int
             Number of reactions
+        method : str, optional
+            Optimization method, by default 'minimize'.
         kwargs : dict
             Additional parameters for optimization.
+            - least_square_algorithm: 'trf', 'dogbox', 'lm'
+            - minimize_algorithm: 'SLSQP', 'trust-constr', 'COBYLA'
+            - scale: Scale factor for the upper bound.
+            - bound_scale: Scale factor for the upper bound.
+            - fallback: Fallback value for upper bound if no reactants are present.
 
         Returns
         -------
@@ -959,9 +988,30 @@ class ReactionOptimizer:
             Optimization result object containing the optimized values and other information.
         """
         try:
+            # NOTE: default values
+            # least_square_algorithm
+            least_square_algorithm = kwargs.get(
+                'least_square_algorithm', 'trf')
+            # minimize_algorithm
+            minimize_algorithm = kwargs.get('minimize_algorithm', 'SLSQP')
+
+            # ? check if the algorithm is valid
+            if minimize_algorithm not in ['SLSQP', 'trust-constr', 'COBYLA']:
+                raise ValueError(
+                    f"Invalid minimize algorithm: {minimize_algorithm}. Must be 'SLSQP', 'trust-constr', or 'COBYLA'.")
+
+            # ? check if the algorithm is valid
+            if least_square_algorithm not in ['trf', 'dogbox', 'lm']:
+                raise ValueError(
+                    f"Invalid least square algorithm: {least_square_algorithm}. Must be 'trf', 'dogbox', or 'lm'.")
+
             # NOTE: set
             # initial guess for extent of reaction
-            EOR0 = np.random.uniform(0, 0.5, reaction_numbers)
+            # default value
+            EOR0_val = kwargs.get('EOR0_val', 0.5)
+
+            # set
+            EOR0 = np.random.uniform(0, EOR0_val, reaction_numbers)
 
             # NOTE: bounds
             bound0 = (0, 20)
@@ -976,7 +1026,8 @@ class ReactionOptimizer:
             # extent of reaction (EoR)
             EOR0_Bounds, EOR0_bounds, EoR_initial = self.compute_bounds(
                 nu=self.stoichiometric_coeff,
-                n0=initial_mole_
+                n0=initial_mole_,
+                **kwargs,
             )
 
             # NOTE: constraints
@@ -992,21 +1043,38 @@ class ReactionOptimizer:
             # set constraints
             cons = []
 
-            # NOTE: optimize
-            opt_res = optimize.minimize(fun=self.obj_fn,
-                                        x0=EOR0,
-                                        args=(initial_mole,
-                                              pressure,
-                                              temperature,
-                                              equilibrium_constants),
-                                        method='SLSQP',
-                                        bounds=EOR0_bounds,
-                                        constraints=cons1,
-                                        options={
-                                            'disp': True,
-                                            'ftol': 1e-12,
-                                            'maxiter': 1000
-                                        })
+            # SECTION: optimize
+            if method == 'minimize':
+                opt_res = optimize.minimize(fun=self.obj_fn,
+                                            x0=EOR0,
+                                            args=(initial_mole,
+                                                  pressure,
+                                                  temperature,
+                                                  equilibrium_constants,
+                                                  method),
+                                            method=minimize_algorithm,
+                                            bounds=EOR0_bounds,
+                                            constraints=cons1,
+                                            options={
+                                                'disp': False,
+                                                'ftol': 1e-12,
+                                                'maxiter': 1000
+                                            })
+            elif method == 'least_squares':
+                opt_res = optimize.least_squares(
+                    fun=self.obj_fn,
+                    x0=EOR0,
+                    args=(initial_mole,
+                          pressure,
+                          temperature,
+                          equilibrium_constants,
+                          method),
+                    bounds=EOR0_Bounds,
+                    method=least_square_algorithm,
+                )
+            else:
+                raise ValueError(
+                    f"Invalid optimization method: {method}. Must be 'minimize' or 'least_squares'.")
 
             # save
             return opt_res
@@ -1124,56 +1192,65 @@ class ReactionOptimizer:
             raise Exception(
                 f"Error in generating constraints collection: {str(e)}") from e
 
-    def process_optimization_results(self,
-                                     res,
-                                     input_data):
+    def equilibrium_results(self,
+                            initial_mole: Dict[str, float | int],
+                            EoR: list):
         '''
-        Check optimization results
+        Calculate the equilibrium results based on the initial mole and extent of reaction.
 
         Parameters
         ----------
-        res : list
-            optimization results
-        initial_data : dict
-            initial data
+        initial_mole : dict
+            Initial mole dictionary {key: value}, such as {CO2: 0, H2: 1, CO: 2, H2O: 3, CH3OH: 4}
+        EoR : list
+            Extent of reaction list [EoR1, EoR2, EoR3, ...]
 
         Returns
         -------
-        None
+        Xfs : dict
+            Final mole fraction dictionary {key: value}, such as {CO2: 0.1, H2: 0.1, CO: 0.2, H2O: 0.3, CH3OH: 0.4}
+        Xfs_vector : np.ndarray
+            Final mole fraction vector [Xfs1, Xfs2, Xfs3, ...]
+        Nf : float
+            Final moles of the system
+        Nfs_vector : np.ndarray
+            Final moles vector [Nf1, Nf2, Nf3, ...]
+        Nfs : dict
+            Final moles dictionary {key: value}, such as {CO2: 0, H2: 1, CO: 2, H2O: 3, CH3OH: 4}
         '''
-        # EoR
-        EoR = res['x']
+        try:
+            # unpack
+            N0s_list, N0s_vector, N0f = self.unpack_X(initial_mole)
 
-        # initial mole
-        N0s = input_data['N0s']
+            # update comp_list with EoR
+            # build EoR => item[key] = value * EoR[i]
+            _, comp_value_matrix = self.build_EoR(EoR)
 
-        # unpack
-        N0s_list, N0s_vector, N0f = self.unpack_X(N0s, self.component_dict)
+            # extent sun [mol]
+            EoR_vector = np.sum(comp_value_matrix, axis=0)
 
-        # update comp_list with EoR
-        # build EoR => item[key] = value * EoR[i]
-        _, comp_value_matrix = self.build_EoR(self.comp_list, EoR)
+            # build final X
+            Xfs, Xfs_vector, Nf, Nfs_vector = self.build_final_X(
+                N0s_vector, EoR_vector)
 
-        # extent sun [mol]
-        EoR_vector = np.sum(comp_value_matrix, axis=0)
+            # Nfs
+            Nfs = {}
+            for key, value in self.component_dict.items():
+                Nfs[key] = Nfs_vector[value]
 
-        # build final X
-        Xfs, Xfs_vector, Nf, Nfs_vector = self.build_final_X(
-            self.component_dict, N0s_vector, EoR_vector)
+            # set float
+            Nfs = {k: float(v) for k, v in Nfs.items()}
+            Xfs = {k: float(v) for k, v in Xfs.items()}
 
-        # Nfs
-        Nfs = {}
-        for key, value in self.component_dict.items():
-            Nfs[key] = Nfs_vector[value]
-
-        return Xfs, Xfs_vector, Nf, Nfs_vector, Nfs
+            return Xfs, Xfs_vector, Nf, Nfs_vector, Nfs
+        except Exception as e:
+            raise Exception(
+                f"Error in processing optimization results: {str(e)}") from e
 
     def compute_bounds(self,
                        nu: np.ndarray,
                        n0: np.ndarray,
-                       fallback: Optional[float] = None,
-                       scale: float = 10.0,
-                       bound_scale: float = 0.5):
+                       **kwargs):
         """
         Computes lower and upper bounds for each reaction extent ξ_j.
 
@@ -1183,12 +1260,14 @@ class ReactionOptimizer:
             The stoichiometric matrix (n_species x n_reactions)
         N0s: np.ndarray
             Initial moles of each species (length: n_species)
-        fallback: float
-            Fallback upper bound when no limiting reactant is present.
-        scale: float
-            Scale factor for the fallback value.
-        slack: float
-            Slack value for the bounds.
+        kwargs: dict
+            Additional parameters for bounds calculation.
+            - scale: float
+                Scale factor for the upper bound.
+            - bound_scale: float
+                Scale factor for the upper bound.
+            - fallback: float
+                Fallback value for upper bound if no reactants are present.
 
         Returns
         -------
@@ -1196,6 +1275,14 @@ class ReactionOptimizer:
             scipy.optimize.Bounds object for use in minimize/least_squares.
         """
         try:
+            # SECTION: default values
+            # scale
+            scale = kwargs.get('scale', 10.0)
+            # bound_scale
+            bound_scale = kwargs.get('bound_scale', 0.5)
+            # fallback
+            fallback = kwargs.get('fallback', None)
+
             # SECTION: Check if nu is a 2D array
             if nu.ndim != 2:
                 raise ValueError("nu must be a 2D array.")

@@ -2,6 +2,7 @@
 import numpy as np
 from typing import Dict, Any, List, Literal, Optional
 import pycuc
+import time  # Import the time module
 # local
 from .reaction import Reaction
 from .thermolinkdb import ThermoLinkDB
@@ -233,6 +234,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                     liquid_mixture: Literal[
                         "ideal", "non-ideal"
                     ] = "ideal",
+                    method: Literal['minimize', 'least_squares'] = 'minimize',
                     **kwargs):
         """
         Calculate the equilibrium state of the reaction system.
@@ -240,7 +242,14 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
         Parameters
         ----------
         inputs : dict
-            Inputs for the equilibrium calculation which must contain:
+            Inputs for the equilibrium calculation.
+        gas_mixture : str, optional
+            Type of gas mixture, by default "ideal".
+        liquid_mixture : str, optional
+            Type of liquid mixture, by default "ideal".
+        method : str, optional
+            Method for the calculation, by default "minimize".
+            Options are "minimize" or "least_squares".
         **kwargs : dict
             Additional arguments for the calculation.
                 - eos_model: Equation of state model to use for the calculation. Options are "SRK" or "PR".
@@ -261,6 +270,9 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
         - pressure: list, pressure in the form of [value, unit].
         """
         try:
+            # ! Start timing
+            start_time = time.time()
+
             # SECTION: check args
             # NOTE: check if inputs are valid
             if not isinstance(inputs, dict):
@@ -421,14 +433,105 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 equilibrium_constant[key] = res_
 
             # NOTE: run equilibrium calculation
-            res = ReactionOptimizer_.opt_run(
+            opt_res = ReactionOptimizer_.opt_run(
                 initial_mole=initial_mole_std,
                 initial_mole_fraction=initial_mole_fraction_std,
                 temperature=temperature_K,
                 pressure=pressure_bar,
                 equilibrium_constants=equilibrium_constant,
                 reaction_numbers=self.reaction_numbers,
+                method=method,
             )
+
+            # NOTE: check optimization result
+            res = {}
+
+            # check if optimization is successful
+            if opt_res.success:
+                # extent of reaction
+                EoR = opt_res.x
+
+                # calculate equilibrium state
+                Eq_Xfs, Eq_Xfs_vector, Eq_Nf, Eq_Nfs_vector, Eq_Nfs = ReactionOptimizer_.equilibrium_results(
+                    initial_mole=initial_mole_std,
+                    EoR=EoR,
+                )
+
+                # SECTION: set results
+                # initial feed
+                res['feed'] = {
+                    "mole": {
+                        'value': initial_mole_std,
+                        'unit': "mol"
+                    },
+                    "mole_total": {
+                        'value': sum(initial_mole_std.values()),
+                        'unit': "mol"
+                    },
+                    "mole_fraction": {
+                        'value': initial_mole_fraction_std,
+                        'unit': "dimensionless"
+                    },
+                    "mole_fraction_sum": {
+                        'value': sum(initial_mole_fraction_std.values()),
+                        'unit': "dimensionless"
+                    },
+                }
+
+                # equilibrium state
+                res['equilibrium'] = {
+                    "mole": {
+                        'value': Eq_Nfs,
+                        'unit': "mol"
+                    },
+                    "mole_total": {
+                        'value': sum(Eq_Nfs.values()),
+                        'unit': "mol"
+                    },
+                    "mole_fraction": {
+                        'value': Eq_Xfs,
+                        'unit': "dimensionless"
+                    },
+                    "mole_fraction_sum": {
+                        'value': sum(Eq_Xfs.values()),
+                        'unit': "dimensionless"
+                    },
+                }
+
+                # extent of reaction
+                res['extent_of_reaction'] = {
+                    "value": EoR,
+                    "unit": "dimensionless"
+                }
+
+                # equilibrium condition
+                # temperature
+                res['temperature'] = {
+                    "value": temperature_K,
+                    "unit": "K"
+                }
+
+                # pressure
+                res['pressure'] = {
+                    "value": pressure_bar,
+                    "unit": "bar"
+                }
+
+                # optimization fun value
+                res['optimization_fun'] = {
+                    "value": opt_res.fun,
+                    "unit": "dimensionless"
+                }
+
+            # NOTE: set time
+            # ! Stop timing
+            end_time = time.time()
+            computation_time = end_time - start_time
+            # add to res
+            res['computation_time'] = {
+                "value": computation_time,
+                "unit": "s"
+            }
 
             # res
             return res
