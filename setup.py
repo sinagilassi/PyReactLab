@@ -30,7 +30,7 @@ setup(
                        'data/*.yml', 'plugin/*.yml', 'plugin/*.csv']},
     license='MIT',
     license_files=[],
-    install_requires=['pandas', 'numpy',
+    install_requires=['numpy',
                       'PyYAML', 'PyCUC',
                       'scipy', 'PyThermoModels',
                       'PyThermoDB'],
