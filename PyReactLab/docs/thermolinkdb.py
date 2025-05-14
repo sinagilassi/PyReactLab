@@ -121,6 +121,8 @@ class ThermoLinkDB:
 
             # datasource
             datasource = {}
+
+            # NOTE: component data
             for component in components:
                 if component in self._thermodb_component:
                     # set
@@ -134,6 +136,25 @@ class ThermoLinkDB:
                             _val = self.datasource[component][item]
                             # save
                             datasource[component][item] = _val
+
+            # NOTE: checking general data defined as 'NRTL' and 'UNIQUAC'
+            for records in self._thermodb_component:
+                # set upper
+                records_ = records.upper()
+
+                # check item
+                if records_ in ['UNIQUAC', 'NRTL']:
+                    # set
+                    datasource[records_] = {}
+                    # parms
+                    for item in dependent_data:
+                        # get value
+                        _val = self.datasource[records].get(item, None)
+
+                        # check
+                        if _val is not None and _val != 'None':
+                            # save
+                            datasource[records_][item] = _val
 
             # res
             return datasource

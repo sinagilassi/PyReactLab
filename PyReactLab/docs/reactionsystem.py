@@ -421,7 +421,9 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             ReactionOptimizer_.activity_model = activity_model
             # init activity class
             ReactionOptimizer_.activity = ptm.activities(
-                components=self.component_list, model_name=activity_model)
+                components=self.component_list,
+                model_name=activity_model,
+                model_source=self.model_source,)
 
             # SECTION: equilibrium constant calculation
             # res

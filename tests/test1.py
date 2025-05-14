@@ -145,8 +145,11 @@ inputs = {
     'pressure': [1.0, "bar"],
 }
 
-# activity inputs
+# NOTE: activity inputs
+# option 1: add activity inputs to datasource
+# option 2: define activity inputs as a dict
 activity_inputs = {}
+
 
 # equilibrium calculation
 res_ = reaction_system.equilibrium(
