@@ -35,6 +35,14 @@ class ReactionOptimizer:
     _activity_model = None
     # activity
     _activity = None
+    # activity inputs
+    _activity_inputs = None
+
+    # NOTE: systems
+    # gas phase
+    _gas_mixture = 'ideal'
+    # solution
+    _solution = 'ideal'
 
     def __init__(self,
                  datasource: Dict[str, Any],
@@ -120,6 +128,7 @@ class ReactionOptimizer:
         # set
         self._activity_model = value
 
+    @property
     def activity(self):
         '''activity model (NRTL, UNIQUAC)'''
         return self._activity
@@ -129,6 +138,39 @@ class ReactionOptimizer:
         '''Set activity model'''
         # set
         self._activity = value
+
+    @property
+    def activity_inputs(self):
+        '''Get activity inputs'''
+        return self._activity_inputs
+
+    @activity_inputs.setter
+    def activity_inputs(self, value: Dict[str, Any]):
+        '''Set activity inputs'''
+        # set
+        self._activity_inputs = value
+
+    @property
+    def gas_mixture(self):
+        '''Get gas mixture'''
+        return self._gas_mixture
+
+    @gas_mixture.setter
+    def gas_mixture(self, value: str):
+        '''Set gas mixture'''
+        # set
+        self._gas_mixture = value
+
+    @property
+    def solution(self):
+        '''Get solution'''
+        return self._solution
+
+    @solution.setter
+    def solution(self, value: str):
+        '''Set solution'''
+        # set
+        self._solution = value
 
     def unpack_X(self, mol_data_pack: Dict[str, float | int]):
         '''
@@ -376,12 +418,6 @@ class ReactionOptimizer:
                                       phase: Literal[
                                           "liquid", "gas"
                                       ] = "gas",
-                                      gas_mixture: Literal[
-                                          "ideal", "non-ideal"
-                                      ] = "ideal",
-                                      solution: Literal[
-                                          "ideal", "non-ideal"
-                                      ] = "ideal",
                                       **kwargs):
         """
         Generate reaction equilibrium equations for gas and liquid phases.
@@ -399,10 +435,6 @@ class ReactionOptimizer:
             the dict value consists of `value`, `symbol`, `unit`, `temperature`, `reaction`, `method`
         phase : str, optional
             Phase of calculation, by default "gas".
-        gas_mixture : str, optional
-            Mode for gas phase calculation, by default "ideal".
-        solution : str, optional
-            Mode for liquid phase calculation, by default "ideal".
         kwargs : dict
             Additional parameters for non-ideal calculations.
 
@@ -454,7 +486,7 @@ class ReactionOptimizer:
             fugacity_coeff = {}
 
             # check gas mixture
-            if gas_mixture.lower() == "non-ideal":
+            if self.gas_mixture.lower() == "non-ideal":
                 # NOTE: model input
                 model_input = {
                     "feed-specification": Xfs,
@@ -472,7 +504,7 @@ class ReactionOptimizer:
                 # update
                 fugacity_coeff = {**res_}
 
-            elif gas_mixture.lower() == "ideal":
+            elif self.gas_mixture.lower() == "ideal":
                 # set
                 for i, key in enumerate(self.component_dict.keys()):
                     fugacity_coeff[key] = 1
@@ -485,16 +517,26 @@ class ReactionOptimizer:
             activity_coeff = {}
 
             # check liquid mixture
-            if solution.lower() == "non-ideal":
+            if self.solution.lower() == "non-ideal":
+
+                # prepare model input
+                model_inputs = {
+                    "mole_fraction": Xfs, **self.activity_inputs
+                }
+
                 # NOTE: check model name
                 if self.activity_model == 'NRTL':
-                    pass
+                    # exec
+                    activity_coeff = self._cal_activity_coefficient_solution(
+                        model_name='NRTL', model_input=model_inputs)
                 elif self.activity_model == 'UNIQUAC':
-                    pass
+                    # exec
+                    activity_coeff = self._cal_activity_coefficient_solution(
+                        model_name='UNIQUAC', model_input=model_inputs)
                 else:
                     raise ValueError(
                         f"Invalid activity model: {self.activity_model}. Must be 'NRTL' or 'UNIQUAC'.")
-            elif solution.lower() == "ideal":
+            elif self.solution.lower() == "ideal":
                 # set
                 for i, key in enumerate(self.component_dict.keys()):
                     activity_coeff[key] = 1
@@ -668,18 +710,18 @@ class ReactionOptimizer:
         """
         try:
             # SECTION: model source
-            model_source = {
-                "datasource": self.datasource,
-                "equationsource": self.equationsource
-            }
+            # model_source = {
+            #     "datasource": self.datasource,
+            #     "equationsource": self.equationsource
+            # }
 
             # NOTE: model name
             if model_name == "NRTL":
                 # calculate fugacity
-                res, others = self.nrtl.cal(model_input=model_input)
+                res, others = self.activity.cal(model_input=model_input)
             elif model_name == "UNIQUAC":
                 # calculate fugacity
-                res, others = self.uniquac.cal(model_input=model_input)
+                res, others = self.activity.cal(model_input=model_input)
             else:
                 raise ValueError(
                     f"Invalid model name: {model_name}. Must be 'NRTL' or 'UNIQUAC'.")

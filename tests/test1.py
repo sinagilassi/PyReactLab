@@ -86,6 +86,10 @@ model_source = {
     "equationsource": equationsource
 }
 
+# NOTE: summary
+summary = prl.summary()
+print(summary)
+
 # NOTE: create reaction system
 reaction_system = prl.create_rxn(
     system_name='Methanol Synthesis',
@@ -96,7 +100,8 @@ reaction_system = prl.create_rxn(
 # Keq at T
 res_ = reaction_system.reaction_equilibrium_constant(
     'Methanol Formation by CO2-Hydrogenation',
-    [300.0, "K"]
+    [300.0, "K"],
+    message="K_eq at 300 K",
 )
 print(f'K_eq: {res_}')
 # NOTE: select reaction
@@ -138,6 +143,10 @@ mole = {
     'CH3OH': 0.001
 }
 
+# NOTE: activity inputs
+# option 1: add activity inputs to datasource
+# option 2: add activity inputs to inputs
+
 # NOTE: input
 inputs = {
     'mole': mole,
@@ -145,16 +154,11 @@ inputs = {
     'pressure': [1.0, "bar"],
 }
 
-# NOTE: activity inputs
-# option 1: add activity inputs to datasource
-# option 2: define activity inputs as a dict
-activity_inputs = {}
-
-
 # equilibrium calculation
 res_ = reaction_system.equilibrium(
     inputs=inputs,
     conversion=['CO2'],
     method='minimize',
-    activity_inputs=activity_inputs,)
+    gas_mixture='ideal',
+    solution='ideal',)
 print(f'Equilibrium: {res_}')

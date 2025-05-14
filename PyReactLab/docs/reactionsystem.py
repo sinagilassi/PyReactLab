@@ -133,6 +133,35 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             # set stoichiometry transpose
             comp_coeff_t = np.array(comp_coeff).T
 
+            # SECTION: overall reaction phase
+            # NOTE: set reaction states
+            overall_reaction_phases = []
+            for item in reaction_res:
+                # name
+                name = item
+
+                # NOTE: reaction state
+                _res = self.__reaction_list[name].reaction_phase
+
+                # save
+                overall_reaction_phases.append(_res)
+
+            # set
+            overall_reaction_phases = list(set(overall_reaction_phases))
+
+            # check if all reactions have the same phase
+            if len(overall_reaction_phases) == 0:
+                raise ValueError(
+                    "No overall reaction phases found in the reactions.")
+
+            # set
+            if len(overall_reaction_phases) == 1:
+                # set
+                self.overall_reaction_phase = overall_reaction_phases[0]
+            else:
+                # set
+                self.overall_reaction_phase = '-'.join(overall_reaction_phases)
+
             # SECTION: energy analysis
             # energy analysis result list
             energy_analysis = {}
@@ -153,7 +182,6 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             self.reaction_numbers = len(reaction_res)
             self.reaction_analysis = reaction_res
             self.overall_reaction_analysis = res_0
-            self.reaction_states = None
             self.component_list = component_list
             self.component_dict = component_dict
             self.coeff_list_dict = comp_list
@@ -171,7 +199,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                                       method: Literal[
                                           "van't Hoff", "shortcut van't Hoff"
                                       ] = "van't Hoff",
-                                      ):
+                                      **kwargs):
         """
         Calculate the equilibrium constant at a given temperature using the van't Hoff equation.
 
@@ -184,10 +212,13 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
         method : str, optional
             Method to calculate the equilibrium constant, by default "van't Hoff".
             Options are "van't Hoff" or "shortcut van't Hoff".
+        **kwargs : dict
+            Additional arguments for the calculation.
+                - message: Optional message to display during the calculation.
 
         Returns
         -------
-        float
+        res : dict
             Equilibrium constant at the given temperature.
         """
         try:
@@ -220,9 +251,16 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                     f"Invalid reaction object for {reaction_name}")
 
             # NOTE: calculate equilibrium constant at the given temperature
-            return reaction.cal_equilibrium_constant(
+            res = reaction.cal_equilibrium_constant(
                 temperature, method=method)
 
+            # NOTE: message
+            message = kwargs.get("message", None)
+            if message is not None:
+                res['message'] = message
+
+            # res
+            return res
         except Exception as e:
             raise Exception(
                 f"Error in ReactionSystem.equilibrium_constant_at_temperature(): {str(e)}") from e
@@ -258,6 +296,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             Additional arguments for the calculation.
                 - eos_model: Equation of state model to use for the calculation. Options are "SRK" or "PR".
                 - activity_model: Activity model to use for the calculation. Options are "NRTL" or "UNIFAC".
+                - message: Optional message to display during the calculation.
 
         Returns
         -------
@@ -272,6 +311,28 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
         - mole: dict, initial mole of the components in the system.
         - temperature: list, temperature in the form of [value, unit].
         - pressure: list, pressure in the form of [value, unit].
+
+        For `non-ideal solution`, the rules of the activity model should be followed.
+
+        Activity inputs for NRTL model should contain:
+        - tau: dict, tau values for the components.
+        - alpha: dict, alpha values for the components.
+
+        Activity inputs for UNIQUAC model should contain:
+        - q: dict, q values for the components.
+        - r: dict, r values for the components.
+        - tau: dict, tau values for the components.
+
+        For both models, dU or a, b, c, and d are required to calculate tau in case tau is not provided. All values should be introduced in the `inputs` as:
+        ```python
+        inputs = {
+            'mole': mole,
+            'temperature': [100, "C"],
+            'pressure': [1.0, "bar"],
+            'tau': tau,
+            'alpha': alpha, ...
+            }
+        ```
         """
         try:
             # ! Start timing
@@ -394,9 +455,17 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             # SECTION: kwargs
             # eos model (name)
             eos_model = kwargs.get("eos_model", "SRK")
+            # check if eos model is valid
+            if eos_model not in ["SRK", "PR", 'RK', 'vdW']:
+                raise ValueError(
+                    "Invalid eos model. Options are 'SRK','RK','PR', or 'vdW'.")
 
             # activity model (name)
             activity_model = kwargs.get("activity_model", "NRTL")
+            # check if activity model is valid
+            if activity_model not in ["NRTL", "UNIQUAC"]:
+                raise ValueError(
+                    "Invalid activity model. Options are 'NRTL' or 'UNIQUAC'.")
 
             # SECTION: init
             ReactionOptimizer_ = ReactionOptimizer(
@@ -411,19 +480,48 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
 
             # SECTION: setting up the reaction optimizer
             # NOTE: set up eos model
-            # eos model
+            # ? eos model
             ReactionOptimizer_.eos_model = eos_model
             # init eos class
             ReactionOptimizer_.eos = ptm.eos()
 
-            # set up activity model
-            # activity model
+            # gas mixture
+            ReactionOptimizer_.gas_mixture = gas_mixture
+
+            # NOTE: set up activity model
+            # ? activity inputs
+            # NRTL: tau, alpha,
+            # dg or a, b, c, and d are required to calculated tau
+            # UNIQUAC: q, r, tau
+            # dU or a, b, c, and d are required to calculated tau
+            activity_inputs = {**inputs}
+            # remove temperature and pressure
+            activity_inputs.pop("temperature", None)
+            activity_inputs.pop("pressure", None)
+            # remove mole and mole fraction
+            activity_inputs.pop("mole", None)
+            activity_inputs.pop("mole_fraction", None)
+
+            # set
+            if activity_inputs is not None:
+                #  check if activity inputs is valid
+                if not isinstance(activity_inputs, dict):
+                    raise ValueError(
+                        "Activity inputs must be a dictionary.")
+
+                # set
+                ReactionOptimizer_.activity_inputs = activity_inputs
+
+            # ? activity model
             ReactionOptimizer_.activity_model = activity_model
             # init activity class
             ReactionOptimizer_.activity = ptm.activities(
                 components=self.component_list,
                 model_name=activity_model,
                 model_source=self.model_source,)
+
+            # solution
+            ReactionOptimizer_.solution = solution
 
             # SECTION: equilibrium constant calculation
             # res
@@ -559,6 +657,16 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 # conversion
                 if conversion_res is not None:
                     res['conversion'] = conversion_res
+
+                # message
+                message = kwargs.get("message", None)
+                if message is not None:
+                    res['message'] = message
+
+                # gas mixture
+                res['gas_mixture'] = gas_mixture
+                # solution
+                res['solution'] = solution
 
             # NOTE: set time
             # ! Stop timing

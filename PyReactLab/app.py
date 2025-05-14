@@ -1,9 +1,19 @@
 # import libs
 from typing import List, Dict, Any, Literal, Optional
 # local
-from .docs import ReactionSystem, Reaction
+from .docs import ReactionSystem, Reaction, ReferenceManager
 from .utils import model_source_checker
 from .configs import DATASOURCE, EQUATIONSOURCE
+
+
+def summary() -> str:
+    """
+    Provide a summary of the app calculation methods and required inputs.
+    """
+    try:
+        return ReferenceManager().load_reference()
+    except Exception as e:
+        raise Exception(f"Error loading app summary: {e}") from e
 
 
 def create_rxn(

@@ -1,31 +1,19 @@
 REFERENCES:
-  GENERAL:
+  IDEAL-CASE:
+    DESCRIPTION:
+      The ideal case is a theoretical model that assumes that the interactions between
+      molecules in a gas or liquid are negligible, and that the gas or liquid behaves
+      ideally. Both fugacity and activity coefficients are equal to 1, and the system follows
+      the ideal gas law or Raoult's law.
     ARGS: None
-    RETURNS: None
     DEPENDANT-DATA:
       GIBBS-ENERGY-OF-FORMATION:
           name: Gibbs energy of formation
           symbol: GiEnFo
           unit: kJ/mol
-      GIBBS-ENERGY-OF-FORMATION-IG:
-        name: Gibbs energy of formation
-        symbol: GiEnFo_IG
-        unit: kJ/mol
-      GIBBS-ENERGY-OF-FORMATION-LIQ:
-        name: Gibbs energy of formation
-        symbol: GiEnFo_LIQ
-        unit: kJ/mol
       ENTHALPY-OF-FORMATION:
         name: enthalpy of formation
         symbol: EnFo
-        unit: kJ/mol
-      ENTHALPY-OF-FORMATION-IG:
-        name: enthalpy of formation
-        symbol: EnFo_IG
-        unit: kJ/mol
-      ENTHALPY-OF-FORMATION-LIQ:
-        name: enthalpy of formation
-        symbol: EnFo_LIQ
         unit: kJ/mol
     DEPENDANT-EQUATIONS:
       VAPOR-PRESSURE:
@@ -36,11 +24,176 @@ REFERENCES:
         name: heat capacity
         symbol: Cp
         unit: J/mol.K
-      HEAT-CAPACITY-GAS:
-        name: heat capacity
-        symbol: Cp_IG
-        unit: J/mol.K
-      HEAT-CAPACITY-LIQUID:
-        name: heat capacity
-        symbol: Cp_LIQ
-        unit: J/mol.K
+  NON-IDEAL-CASE:
+    DESCRIPTION:
+      The non-ideal case is a theoretical model that accounts for the interactions between
+      molecules in a gas or liquid, and that the gas or liquid does not behave ideally. The
+      fugacity and activity coefficients are Calculated using various equations of state
+      and models, such as the van der Waals equation, the Peng-Robinson equation, and the
+      Soave-Redlich-Kwong equation. The activity coefficients are calculated using various
+      models, such as the NRTL and UNIQUAC models.
+  vdW:
+    DESCRIPTION:
+      The van der Waals equation is the first notable modification of the ideal gas law, developed to account for the real behavior of gases by incorporating molecular interactions and finite molecular volume. While it provides only qualitative accuracy, it laid the foundation for more advanced equations of state. To apply the van der Waals EOS, two parameters are needed. the attraction parameter a, which represents the intermolecular forces, and the repulsion parameter b, which accounts for the volume occupied by gas molecules. Both parameters can be derived from the critical temperature and pressure of the pure component using standard empirical correlations.
+    DEPENDANT-DATA:
+      critical-temperature:
+        name: critical temperature
+        symbol: Tc
+        unit: K
+      critical-pressure:
+        name: critical pressure
+        symbol: Pc
+        unit: Pa
+    DEPENDANT-EQUATIONS:
+      vapor-pressure:
+        name: vapor pressure
+        symbol: VaPr
+        unit: Pa
+  PR:
+    DESCRIPTION:
+      The Peng-Robinson EOS offers further refinement over SRK by improving the prediction of liquid densities and providing better thermodynamic consistency, particularly in systems approaching the critical point.In this model, the same fundamental parameters a, b, and ω are used. The alpha function used in PR is slightly different from that in SRK but serves the same purpose—to correct the attractive term for temperature effects and molecular characteristics. These parameters are again computed using critical temperature, critical pressure, and the acentric factor. The PR equation is widely favored in industrial applications due to its reliable predictions for both vapor and liquid phases, especially in multi-component systems.
+    DEPENDANT-DATA:
+      critical-temperature:
+        name: critical temperature
+        symbol: Tc
+        unit: K
+      critical-pressure:
+        name: critical pressure
+        symbol: Pc
+        unit: Pa
+      acentric-factor:
+        name: acentric factor
+        symbol: AcFa
+        unit: None
+    DEPENDANT-EQUATIONS:
+      vapor-pressure:
+          name: vapor pressure
+          symbol: VaPr
+          unit: Pa
+  SRK:
+    DESCRIPTION:
+      The SRK EOS is a modification of the Redlich-Kwong model, where the temperature-dependent attraction term is replaced by a more general function that includes the acentric factor. This enhancement significantly improves phase equilibrium calculations, especially for non-ideal systems.To use the SRK equation, the parameters a and b are still obtained from critical properties, but an additional parameter, the acentric factor ω, is required. The temperature correction is done through an alpha function α(T,ω), which adjusts the attractive forces based on temperature and molecular complexity. This makes SRK suitable for modeling vapor–liquid equilibria and fugacity coefficients in hydrocarbon systems.
+    DEPENDANT-DATA:
+      critical-temperature:
+        name: critical temperature
+        symbol: Tc
+        unit: K
+      critical-pressure:
+        name: critical pressure
+        symbol: Pc
+        unit: Pa
+      acentric-factor:
+        name: acentric factor
+        symbol: AcFa
+        unit: None
+    DEPENDANT-EQUATIONS:
+      vapor-pressure:
+        name: vapor pressure
+        symbol: VaPr
+        unit: Pa
+  RK:
+    DESCRIPTION:
+      The Redlich-Kwong equation improves upon van der Waals by introducing a temperature dependence in the attractive term, making it more accurate for vapor-phase behavior, particularly at moderate pressures.This model also requires two parameters, a and b, which are calculated from the component’s critical temperature and pressure. However, the attraction parameter a in this case includes an inverse square root dependency on temperature, providing better results for gas-phase fugacity and compressibility factor.
+    DEPENDANT-DATA:
+      critical-temperature:
+        name: critical temperature
+        symbol: Tc
+        unit: K
+      critical-pressure:
+        name: critical pressure
+        symbol: Pc
+        unit: Pa
+      acentric-factor:
+        name: acentric factor
+        symbol: AcFa
+        unit: None
+    DEPENDANT-EQUATIONS:
+      vapor-pressure:
+        name: vapor pressure
+        symbol: VaPr
+        unit: Pa
+  NRTL:
+    DESCRIPTION:
+      The NRTL model is a local composition activity coefficient model used to describe non-ideal liquid-phase behavior, particularly in liquid–liquid and vapor–liquid equilibrium systems. It accounts for the fact that molecules in a solution experience different local environments due to size, shape, and polarity differences, and introduces a non-randomness parameter to model this effect.
+      To apply the NRTL model, the required parameters include a set of binary interaction energy parameters τij​ and τji, which represent the relative interaction energies between components iii and jjj. These are often expressed as τij=Δgij/RT, where Δgij​ is the excess Gibbs energy between component pairs. The model also requires a non-randomness parameter αij​, which reflects the degree of local composition deviation from random mixing
+    ARGS:
+      non-randomness-parameter:
+        name: non-randomness parameter
+        symbol: alpha
+        unit: None
+      binary-interaction-parameter:
+        name: binary interaction parameter
+        symbol: tau
+        unit: None
+    DEPENDANT-DATA:
+      non-randomness-parameter:
+        name: non-randomness parameter
+        symbol: alpha
+        unit: None
+      dg:
+        name: dg
+        symbol: dg
+        unit: None
+      a:
+        name: a
+        symbol: a
+        unit: None
+      b:
+        name: b
+        symbol: b
+        unit: None
+      c:
+        name: c
+        symbol: c
+        unit: None
+      d:
+        name: d
+        symbol: d
+        unit: None
+      binary-interaction-parameter:
+        name: binary interaction parameter
+        symbol: tau
+        unit: None
+    DEPENDANT-EQUATIONS: None
+  UNIQUAC:
+    DESCRIPTION:
+      The UNIQUAC model is a semi-empirical activity coefficient model that improves the representation of liquid-phase non-idealities by explicitly considering both combinatorial (size and shape effects) and residual (energy interaction) contributions. It is widely used in chemical engineering for phase equilibrium calculations, especially in systems with molecules of different sizes and structures. To use the UNIQUAC model, each component in the mixture must be assigned two pure component structural parameters, the volume parameter ri​ and the surface area parameter qi​. These values characterize the relative size and shape of the molecules and are usually available in group contribution tables or literature. In addition to the structural parameters, UNIQUAC requires binary interaction parameters τij​, which are derived from interaction energies (similar to NRTL). These parameters account for the energetic interaction between dissimilar molecules and are needed for each binary pair in the system.
+    ARGS:
+      volume-parameter:
+        name: volume parameter
+        symbol: r
+        unit: None
+      surface-area-parameter:
+        name: surface area parameter
+        symbol: q
+        unit: None
+      binary-interaction-parameter:
+        name: binary interaction parameter
+        symbol: tau
+        unit: None
+    DEPENDANT-DATA:
+      du:
+        name: du
+        symbol: du
+        unit: None
+      a:
+        name: a
+        symbol: a
+        unit: None
+      b:
+        name: b
+        symbol: b
+        unit: None
+      c:
+        name: c
+        symbol: c
+        unit: None
+      d:
+        name: d
+        symbol: d
+        unit: None
+      binary-interaction-parameter:
+        name: binary interaction parameter
+        symbol: tau
+        unit: None
+    DEPENDANT-EQUATIONS: None

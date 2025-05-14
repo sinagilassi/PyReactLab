@@ -75,6 +75,7 @@ class Reaction():
             # 'products': products,
             # 'reaction_coefficient': reaction_coefficient,
             # 'carbon_count': carbon_count
+            # 'reaction_state': reaction_state,
             _res_0 = self.ChemReactUtils_.analyze_reaction(self.reaction)
 
             # NOTE: energy analysis
@@ -93,6 +94,8 @@ class Reaction():
             self.products = _res_0['products']
             self.reaction_coefficient = _res_0['reaction_coefficient']
             self.carbon_count = _res_0['carbon_count']
+            self.reaction_state = _res_0['reaction_state']
+            self.reaction_phase = _res_0['reaction_phase']
             self.energy_analysis = energy_analysis
             # extract
             self.gibbs_free_energy_of_formation_std = energy_analysis[
@@ -117,6 +120,7 @@ class Reaction():
                 'products': _res_0['products'],
                 'reaction_coefficient': _res_0['reaction_coefficient'],
                 'carbon_count': _res_0['carbon_count'],
+                'reaction_state': _res_0['reaction_state'],
                 'energy_analysis': energy_analysis
             }
 

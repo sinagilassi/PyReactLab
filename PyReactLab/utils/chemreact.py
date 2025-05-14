@@ -136,6 +136,20 @@ class ChemReactUtils:
                 carbon_count[p['molecule']] = self.count_carbon(
                     p['molecule'], p['coefficient'])
 
+            # SECTION: reaction state
+            reaction_state = {}
+            for r in reactants:
+                # set
+                reaction_state[r['molecule']] = r['state']
+            for p in products:
+                # set
+                reaction_state[p['molecule']] = p['state']
+
+            # NOTE: reaction phase
+            # reaction
+            reaction_phase = self.determine_reaction_phase(
+                reaction_state)
+
             # res
             res = {
                 'name': name,
@@ -143,7 +157,9 @@ class ChemReactUtils:
                 'reactants': reactants,
                 'products': products,
                 'reaction_coefficient': reaction_coefficient,
-                'carbon_count': carbon_count
+                'carbon_count': carbon_count,
+                'reaction_state': reaction_state,
+                'reaction_phase': reaction_phase
             }
 
             return res
@@ -276,3 +292,59 @@ class ChemReactUtils:
             return component_list, component_dict, comp_list, comp_coeff
         except Exception as e:
             raise Exception(f"Error defining component ID: {e}")
+
+    def state_name_set(self, state_set: set) -> List[str]:
+        '''
+        Convert state set to full names
+
+        Parameters
+        ----------
+        state_set: set
+            Set of states
+
+        Returns
+        -------
+        state_names: list
+            List of full state names
+        '''
+        try:
+            state_dict = {
+                'g': 'gas',
+                'l': 'liquid',
+                'aq': 'aqueous',
+                's': 'solid'
+            }
+
+            # Map the states from the set to their full names
+            return [state_dict[state] for state in state_set]
+        except Exception as e:
+            raise Exception(f"Error converting state set to full names: {e}")
+
+    def determine_reaction_phase(self, reaction_dict: Dict[str, str]) -> str:
+        '''
+        Determine the phase of a reaction based on the states of its components.
+
+        Parameters
+        ----------
+        reaction_dict: dict
+            A dictionary where keys are component names and values are their states.
+
+        Returns
+        -------
+        str
+            The phase of the reaction, which can be 'gas', 'liquid', 'aqueous', 'solid', or a combination of these.
+        '''
+        try:
+            # Collect the states from the values in the dictionary
+            available_states = set(reaction_dict.values())
+
+            # Convert the states to full names
+            state_names = self.state_name_set(available_states)
+
+            # Determine phase based on the number of unique states
+            if len(state_names) == 1:
+                return f'{state_names[0]}'
+            else:
+                return f'{"-".join(state_names)}'
+        except Exception as e:
+            raise Exception(f"Error determining reaction phase: {e}")
