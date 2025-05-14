@@ -3,7 +3,7 @@ from typing import Dict, List, Literal, Optional, Any
 import numpy as np
 from math import sqrt, pow, exp, log
 from scipy import optimize
-import pyThermoModels as ptm
+from pyThermoModels import NRTL, UNIQUAC
 from scipy.optimize import Bounds, NonlinearConstraint
 # local
 from ..configs import (
@@ -33,6 +33,8 @@ class ReactionOptimizer:
     _eos_model = None
     # activity model
     _activity_model = None
+    # activity
+    _activity = None
 
     def __init__(self,
                  datasource: Dict[str, Any],
@@ -107,11 +109,6 @@ class ReactionOptimizer:
         # set
         self._eos_model = value
 
-    def init_eos(self):
-        '''Initialize eos model'''
-        # init model
-        self.eos = ptm.eos()
-
     @property
     def activity_model(self):
         '''Get activity model'''
@@ -123,21 +120,15 @@ class ReactionOptimizer:
         # set
         self._activity_model = value
 
-    def init_activity(self):
-        '''Initialize activity model'''
-        # init model
-        self.activity = ptm.activity(
-            components=self.component_list, model_name=self.activity_model)
+    def activity(self):
+        '''activity model (NRTL, UNIQUAC)'''
+        return self._activity
 
-        if self.activity_model == 'NRTL':
-            # nrtl
-            self.nrtl = self.activity.nrtl
-        elif self.activity_model == 'UNIQUAC':
-            # uniquac
-            self.uniquac = self.activity.uniquac
-        else:
-            raise ValueError(
-                f"Invalid activity model: {self.activity_model}. Must be 'NRTL' or 'UNIQUAC'.")
+    @activity.setter
+    def activity(self, value: str):
+        '''Set activity model'''
+        # set
+        self._activity = value
 
     def unpack_X(self, mol_data_pack: Dict[str, float | int]):
         '''
@@ -388,7 +379,7 @@ class ReactionOptimizer:
                                       gas_mixture: Literal[
                                           "ideal", "non-ideal"
                                       ] = "ideal",
-                                      liquid_mixture: Literal[
+                                      solution: Literal[
                                           "ideal", "non-ideal"
                                       ] = "ideal",
                                       **kwargs):
@@ -410,7 +401,7 @@ class ReactionOptimizer:
             Phase of calculation, by default "gas".
         gas_mixture : str, optional
             Mode for gas phase calculation, by default "ideal".
-        liquid_mixture : str, optional
+        solution : str, optional
             Mode for liquid phase calculation, by default "ideal".
         kwargs : dict
             Additional parameters for non-ideal calculations.
@@ -494,7 +485,7 @@ class ReactionOptimizer:
             activity_coeff = {}
 
             # check liquid mixture
-            if liquid_mixture.lower() == "non-ideal":
+            if solution.lower() == "non-ideal":
                 # NOTE: check model name
                 if self.activity_model == 'NRTL':
                     pass
@@ -503,7 +494,7 @@ class ReactionOptimizer:
                 else:
                     raise ValueError(
                         f"Invalid activity model: {self.activity_model}. Must be 'NRTL' or 'UNIQUAC'.")
-            elif liquid_mixture.lower() == "ideal":
+            elif solution.lower() == "ideal":
                 # set
                 for i, key in enumerate(self.component_dict.keys()):
                     activity_coeff[key] = 1
@@ -645,14 +636,14 @@ class ReactionOptimizer:
             raise Exception(
                 f"Error in calculating the fugacity coefficient for the gaseous mixture: {str(e)}") from e
 
-    def _cal_fugacity_coefficient_liquid_mixture(self,
-                                                 model_name: Literal[
-                                                     'NRTL', 'UNIQUAC'
-                                                 ],
-                                                 model_input: Dict[str, Any],
-                                                 ):
+    def _cal_activity_coefficient_solution(self,
+                                           model_name: Literal[
+                                               'NRTL', 'UNIQUAC'
+                                           ],
+                                           model_input: Dict[str, Any],
+                                           ):
         """
-        Calculate the fugacity coefficient of liquid mixture using the specified model.
+        Calculate the activity coefficient of solution using the specified model.
 
         Parameters
         ----------

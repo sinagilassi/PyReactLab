@@ -145,9 +145,13 @@ inputs = {
     'pressure': [1.0, "bar"],
 }
 
+# activity inputs
+activity_inputs = {}
+
 # equilibrium calculation
 res_ = reaction_system.equilibrium(
     inputs=inputs,
     conversion=['CO2'],
-    method='minimize')
+    method='minimize',
+    activity_inputs=activity_inputs,)
 print(f'Equilibrium: {res_}')

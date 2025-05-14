@@ -3,6 +3,7 @@ import numpy as np
 from typing import Dict, Any, List, Literal, Optional
 import pycuc
 import time  # Import the time module
+import pyThermoModels as ptm
 # local
 from .reaction import Reaction
 from .thermolinkdb import ThermoLinkDB
@@ -232,7 +233,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                     gas_mixture: Literal[
                         "ideal", "non-ideal"
                     ] = "ideal",
-                    liquid_mixture: Literal[
+                    solution: Literal[
                         "ideal", "non-ideal"
                     ] = "ideal",
                     method: Literal['minimize', 'least_squares'] = 'minimize',
@@ -248,7 +249,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             List of components to calculate conversion for, by default None.
         gas_mixture : str, optional
             Type of gas mixture, by default "ideal".
-        liquid_mixture : str, optional
+        solution : str, optional
             Type of liquid mixture, by default "ideal".
         method : str, optional
             Method for the calculation, by default "minimize".
@@ -391,10 +392,10 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             )
 
             # SECTION: kwargs
-            # eos model
+            # eos model (name)
             eos_model = kwargs.get("eos_model", "SRK")
 
-            # activity model
+            # activity model (name)
             activity_model = kwargs.get("activity_model", "NRTL")
 
             # SECTION: init
@@ -408,17 +409,21 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 self.overall_reaction_analysis,
             )
 
-            # NOTE: setting up the reaction optimizer
+            # SECTION: setting up the reaction optimizer
+            # NOTE: set up eos model
             # eos model
             ReactionOptimizer_.eos_model = eos_model
             # init eos class
-            ReactionOptimizer_.init_eos()
+            ReactionOptimizer_.eos = ptm.eos()
+
+            # set up activity model
             # activity model
             ReactionOptimizer_.activity_model = activity_model
             # init activity class
-            ReactionOptimizer_.init_activity()
+            ReactionOptimizer_.activity = ptm.activities(
+                components=self.component_list, model_name=activity_model)
 
-            # NOTE: equilibrium constant calculation
+            # SECTION: equilibrium constant calculation
             # res
             equilibrium_constant = {}
 
