@@ -8,6 +8,13 @@ PENG_ROBINSON = "PR"
 SOAVE_REDLICH_KWONG = "SRK"
 REDLICH_KWONG = "RK"
 VAN_DER_WAALS = "VDW"
+# eos models
+EOS_MODELS = [
+    PENG_ROBINSON,
+    SOAVE_REDLICH_KWONG,
+    REDLICH_KWONG,
+    VAN_DER_WAALS
+]
 
 # NOTE: assumptions
 RAOULT_MODEL = 'raoult'
@@ -16,6 +23,11 @@ MODIFIED_RAOULT_MODEL = 'modified-raoult'
 # NOTE: activity coefficient model
 NRTL_ACTIVITY_MODEL = 'NRTL'
 UNIQUAC_ACTIVITY_MODEL = 'UNIQUAC'
+# activity models
+ACTIVITY_MODELS = [
+    NRTL_ACTIVITY_MODEL,
+    UNIQUAC_ACTIVITY_MODEL
+]
 
 # NOTE: universal gas constant [J/mol.K]
 R_CONST_J__molK = 8.314472

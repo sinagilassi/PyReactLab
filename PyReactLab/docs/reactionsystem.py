@@ -22,21 +22,29 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
     __reactions = None
     # primary analysis result
     __reaction_analysis = None
-    __reaction_list = {}
+    __reaction_list: Dict[str, Reaction] = {}
 
     # reference plugin
     _references = {}
 
+    # overall reaction phase
+    overall_reaction_phase = None
+
     def __init__(self,
                  system_name: str,
                  reactions: List[Dict[str, Any]],
-                 model_source: Dict[str, Any]
+                 model_source: Dict[str, Any],
+                 **kwargs
                  ):
         self.__system_name = system_name
         self.__reactions = reactions
 
         # NOTE: model source
         self.__model_source = model_source
+
+        # NOTE: kwargs
+        # phase rule
+        self.phase_rule = kwargs.get("phase_rule", None)
 
         # NOTE: init class
         ReferenceManager.__init__(self)
@@ -52,14 +60,20 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
     @property
     def system_name(self) -> str:
         """Get the name of the reaction system."""
+        # check
+        if self.__system_name is None:
+            return "No system name found."
         return self.__system_name
 
     @property
-    def reactions(self) -> List[Dict[str, Any]]:
+    def reactions(self) -> List[Dict[str, str]]:
         """Get the reactions of the reaction system."""
+        # check
+        if self.__reactions is None:
+            raise ValueError("No reactions found.")
         return self.__reactions
 
-    def select_reaction(self, reaction_name: str) -> Optional[Reaction]:
+    def select_reaction(self, reaction_name: str) -> Reaction:
         """
         Select a reaction from the reaction system.
 
@@ -78,8 +92,13 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             if reaction_name not in self.__reaction_list:
                 raise ValueError(f"Invalid reaction name: {reaction_name}")
 
-            # return reaction object
-            return self.__reaction_list[reaction_name]
+            # reaction object
+            reaction = self.__reaction_list.get(reaction_name, None)
+            # check if reaction is valid
+            if reaction is None or reaction == 'None':
+                raise ValueError(
+                    f"Invalid reaction object for {reaction_name}")
+            return reaction
         except Exception as e:
             raise Exception(
                 f"Error in ReactionSystem.select_reaction(): {str(e)}") from e
@@ -100,13 +119,17 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             # looping through each reaction
             for item in self.reactions:
                 # NOTE: create reaction
-                r_ = Reaction(self.datasource, self.equationsource, item)
+                r_ = Reaction(
+                    self.datasource,
+                    self.equationsource,
+                    item,
+                    phase_rule=self.phase_rule,)
 
                 # NOTE: analyze reaction
                 _res = r_.reaction_analysis_result
 
                 # name
-                name = item['name']
+                name: str = item['name']
                 # update
                 reaction_res[name] = _res
                 # set
@@ -117,12 +140,21 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
 
             # SECTION: analyze overall reaction
             # ! to set consumed, produced, and intermediate species
-            res_0 = ChemReactUtils_.analyze_overall_reactions(
-                self.reactions)
+            # NOTE: version 1
+            # res_0 = ChemReactUtils_.analyze_overall_reactions(
+            #     self.reactions)
+            # NOTE: version 2
+            res_0 = ChemReactUtils_.analyze_overall_reactions_v2(
+                reaction_res)
 
             # SECTION: set component
-            res_1 = ChemReactUtils_.define_component_id(
+            # NOTE: version 1
+            # res_1 = ChemReactUtils_.define_component_id(
+            #     reaction_res)
+            # NOTE: version 2
+            res_1 = ChemReactUtils_.define_component_id_v2(
                 reaction_res)
+
             # extract
             # ? component_list: list of components
             # ? component_dict: dict of component: id
@@ -446,11 +478,17 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                     initial_mole)
 
             # NOTE: build mole and mole fraction matrix regarding the component dict
-            initial_mole_std, initial_mole_fraction_std, _, _ = ReactionAnalyzer.set_stream(
-                component_dict=self.component_dict,
-                mole=initial_mole,
-                mole_fraction=initial_mole_fraction,
-            )
+            # check
+            if initial_mole is not None and initial_mole_fraction is not None:
+                # set values
+                initial_mole_std, initial_mole_fraction_std, _, _ = ReactionAnalyzer.set_stream(
+                    component_dict=self.component_dict,
+                    mole=initial_mole,
+                    mole_fraction=initial_mole_fraction,
+                )
+            else:
+                raise ValueError(
+                    "Initial mole and mole fraction must be provided.")
 
             # SECTION: kwargs
             # eos model (name)
@@ -560,10 +598,11 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 EoR = opt_res.x
 
                 # calculate equilibrium state
-                Eq_Xfs, Eq_Xfs_vector, Eq_Nf, Eq_Nfs_vector, Eq_Nfs = ReactionOptimizer_.equilibrium_results(
-                    initial_mole=initial_mole_std,
-                    EoR=EoR,
-                )
+                Eq_Xfs, Eq_Xfs_vector, Eq_Nf, Eq_Nfs_vector, Eq_Nfs = \
+                    ReactionOptimizer_.equilibrium_results(
+                        initial_mole=initial_mole_std,
+                        EoR=EoR,
+                    )
 
                 # NOTE: calculate conversion
                 # res

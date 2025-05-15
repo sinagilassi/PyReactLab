@@ -62,11 +62,11 @@ thub1 = ptdblink.init()
 print(type(thub1))
 
 # add component thermodb
-thub1.add_thermodb('CO2', CO2)
-thub1.add_thermodb('H2', H2)
-thub1.add_thermodb('CO', CO)
-thub1.add_thermodb('H2O', H2O)
-thub1.add_thermodb('CH3OH', CH3OH)
+thub1.add_thermodb('CO2-g', CO2)
+thub1.add_thermodb('H2-g', H2)
+thub1.add_thermodb('CO-g', CO)
+thub1.add_thermodb('H2O-g', H2O)
+thub1.add_thermodb('CH3OH-g', CH3OH)
 
 # NOTE: add thermodb rule
 thermodb_config_file = os.path.join(current_dir, 'thermodb_config_link.yml')
@@ -91,7 +91,7 @@ summary = prl.summary()
 print(summary)
 
 # NOTE: create reaction system
-reaction_system = prl.create_rxn(
+reaction_system = prl.create_gas_rxn(
     system_name='Methanol Synthesis',
     reactions=reactions,
     model_source=model_source
@@ -128,19 +128,19 @@ print(f'En_rxn: {res_}')
 # SECTION: equilibrium calculation
 # NOTE: mole fraction
 mole_fraction = {
-    'CO2': 1,
-    'H2': 3,
-    'CO': 1,
-    'H2O': 0.1,
-    'CH3OH': 0.3
+    'CO2-g': 1,
+    'H2-g': 3,
+    'CO-g': 1,
+    'H2O-g': 0.1,
+    'CH3OH-g': 0.3
 }
 
 mole = {
-    'CO2': 1,
-    'H2': 3,
-    'CO': 1,
-    'H2O': 0.001,
-    'CH3OH': 0.001
+    'CO2-g': 1,
+    'H2-g': 3,
+    'CO-g': 1,
+    'H2O-g': 0.001,
+    'CH3OH-g': 0.001
 }
 
 # NOTE: activity inputs
@@ -157,8 +157,8 @@ inputs = {
 # equilibrium calculation
 res_ = reaction_system.equilibrium(
     inputs=inputs,
-    conversion=['CO2'],
-    method='minimize',
+    conversion=['CO2-g'],
+    method='least_squares',
     gas_mixture='ideal',
     solution='ideal',)
 print(f'Equilibrium: {res_}')

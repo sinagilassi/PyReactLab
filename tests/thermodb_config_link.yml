@@ -5,7 +5,7 @@
 # EQUATIONS:
 #   equation symbol defined in TableEquations: new symbol
 
-CO2:
+CO2-g:
   DATA:
     Pc: Pc
     Tc: Tc
@@ -17,7 +17,7 @@ CO2:
     heat-capacity: Cp
     VAPOR-PRESSURE : VaPr
     HEAT-CAPACITY : Cp
-H2:
+H2-g:
   DATA:
     Pc: Pc
     Tc: Tc
@@ -29,7 +29,7 @@ H2:
     heat-capacity: Cp
     VAPOR-PRESSURE : VaPr
     HEAT-CAPACITY : Cp
-CO:
+CO-g:
   DATA:
     Pc: Pc
     Tc: Tc
@@ -41,7 +41,7 @@ CO:
     heat-capacity: Cp
     VAPOR-PRESSURE : VaPr
     HEAT-CAPACITY : Cp
-H2O:
+H2O-g:
   DATA:
     Pc: Pc
     Tc: Tc
@@ -53,7 +53,7 @@ H2O:
     heat-capacity: Cp
     VAPOR-PRESSURE : VaPr
     HEAT-CAPACITY : Cp
-CH3OH:
+CH3OH-g:
   DATA:
     Pc: Pc
     Tc: Tc

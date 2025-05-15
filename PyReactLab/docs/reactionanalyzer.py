@@ -1,7 +1,7 @@
 # import libs
 from typing import Dict, Any, List, Literal, Optional
 from math import exp
-from pyThermoDB import TableEquation
+from pyThermoDB import TableEquation, TableMatrixEquation, TableData, TableMatrixData
 import pycuc
 #  local
 from ..configs import (
@@ -41,6 +41,83 @@ class ReactionAnalyzer:
         """
         # self.datasource = datasource
         # self.equationsource = equationsource
+
+    def datasource_extractor(self,
+                             datasource: Dict[str, Any],
+                             component_ids: List[str],
+                             property_name: str):
+        """
+        Extract a specific property from the datasource for a given component.
+
+        Parameters
+        ----------
+        datasource : dict
+            The datasource containing the thermodynamic data.
+        component_ids : list[str]
+            The ID of the component to extract data for.
+        property_name : str
+            The name of the property to extract.
+
+        Returns
+        -------
+        dict
+            The extracted property data.
+        """
+        try:
+            # looping through the component_id
+            for component_id in component_ids:
+                # check if the component exists in the datasource
+                if component_id in datasource.keys():
+                    # component datasource
+                    component_datasource = datasource[component_id]
+                    # check if the property exists in the component datasource
+                    if property_name in component_datasource.keys():
+                        # Extract the property data from the datasource
+                        return datasource[component_id][property_name]
+
+            # If the property is not found in any of the components, return None
+            raise ValueError(
+                f"Property '{property_name}' not found for component '{component_ids}'.")
+        except KeyError as e:
+            raise KeyError(
+                f"Property '{property_name}' not found for component '{component_id}'.") from e
+
+    def equationsource_extractor(self,
+                                 equationsource: Dict[str, Any],
+                                 component_ids: List[str],
+                                 equation_name: str):
+        """
+        Extract a specific equation name from the equationsource for a given component.
+
+        Parameters
+        ----------
+        equationsource : dict
+            The equationsource containing the reaction equations.
+        component_ids : List[str]
+            The ID of the component to extract data for.
+        equation_name : str
+            The name of the equation to extract.
+
+
+        """
+        try:
+            # looping through the component_id
+            for component_id in component_ids:
+                # check if the component exists in the equationsource
+                if component_id in equationsource.keys():
+                    # component equationsource
+                    component_equationsource = equationsource[component_id]
+                    # check if the equation name exists in the component equationsource
+                    if equation_name in component_equationsource.keys():
+                        # Extract the equation data from the equationsource
+                        return equationsource[component_id][equation_name]
+
+            # If the equation name is not found in any of the components, return None
+            raise ValueError(
+                f"Equation '{equation_name}' not found for component '{component_ids}'.")
+        except KeyError as e:
+            raise KeyError(
+                f"Equation '{equation_name}' not found for component '{component_id}'.") from e
 
     def energy_analysis(self,
                         datasource: Dict[str, Any],
@@ -122,18 +199,37 @@ class ReactionAnalyzer:
         for reactant in reaction['reactants']:
             # molecule
             molecule_ = reactant['molecule']
+            molecule_state_ = reactant['molecule_state']
+
             # ! gibbs energy of formation
-            _dGf_IG = datasource[molecule_]['GiEnFo']
+            _dGf_IG = self.datasource_extractor(
+                # type: ignore
+                datasource, [molecule_, molecule_state_], 'GiEnFo'
+            )
+            # check
+            if _dGf_IG is None or _dGf_IG == 'None':
+                raise ValueError(
+                    f"Failed to extract Gibbs energy of formation for {molecule_}.")
+
             # ? add
-            data_src[GIBBS_FREE_ENERGY_OF_FORMATION_STD]['reactants'][molecule_] = {
+            data_src[GIBBS_FREE_ENERGY_OF_FORMATION_STD]['reactants'][molecule_state_] = {
                 'value': float(_dGf_IG['value']),
                 'unit': _dGf_IG['unit']
             }
 
             # ! enthalpy of formation
-            _dHf_IG = datasource[molecule_]['EnFo']
+            _dHf_IG = self.datasource_extractor(
+                # type: ignore
+                datasource, [molecule_, molecule_state_], 'EnFo'
+            )
+
+            # check
+            if _dHf_IG is None or _dHf_IG == 'None':
+                raise ValueError(
+                    f"Failed to extract Enthalpy of formation for {molecule_}.")
+
             # ? add
-            data_src[ENTHALPY_OF_FORMATION_STD]['reactants'][molecule_] = {
+            data_src[ENTHALPY_OF_FORMATION_STD]['reactants'][molecule_state_] = {
                 'value': float(_dHf_IG['value']),
                 'unit': _dHf_IG['unit']
             }
@@ -142,18 +238,38 @@ class ReactionAnalyzer:
         for product in reaction['products']:
             # molecule
             molecule_ = product['molecule']
+            molecule_state_ = product['molecule_state']
+
             # ! gibbs energy of formation
-            _dGf_IG = datasource[molecule_]['GiEnFo']
+            _dGf_IG = self.datasource_extractor(
+                # type: ignore
+                datasource, [molecule_, molecule_state_], 'GiEnFo'
+            )
+
+            # check
+            if _dGf_IG is None or _dGf_IG == 'None':
+                raise ValueError(
+                    f"Failed to extract Gibbs energy of formation for {molecule_}.")
+
             # ? add
-            data_src[GIBBS_FREE_ENERGY_OF_FORMATION_STD]['products'][molecule_] = {
+            data_src[GIBBS_FREE_ENERGY_OF_FORMATION_STD]['products'][molecule_state_] = {
                 'value': float(_dGf_IG['value']),
                 'unit': _dGf_IG['unit']
             }
 
             # ! enthalpy of formation
-            _dHf_IG = datasource[molecule_]['EnFo']
+            _dHf_IG = self.datasource_extractor(
+                # type: ignore
+                datasource, [molecule_, molecule_state_], 'EnFo'
+            )
+
+            # check
+            if _dHf_IG is None or _dHf_IG == 'None':
+                raise ValueError(
+                    f"Failed to extract Enthalpy of formation for {molecule_}.")
+
             # ? add
-            data_src[ENTHALPY_OF_FORMATION_STD]['products'][molecule_] = {
+            data_src[ENTHALPY_OF_FORMATION_STD]['products'][molecule_state_] = {
                 'value': float(_dHf_IG['value']),
                 'unit': _dHf_IG['unit']
             }
@@ -167,13 +283,16 @@ class ReactionAnalyzer:
         for reactant in reaction['reactants']:
             # molecule
             molecule_ = reactant['molecule']
+            # molecule state
+            molecule_state_ = reactant['molecule_state']
+
             # ! calculate gibbs energy of reaction
-            val_0 = data_src[GIBBS_FREE_ENERGY_OF_FORMATION_STD]['reactants'][molecule_]['value']
+            val_0 = data_src[GIBBS_FREE_ENERGY_OF_FORMATION_STD]['reactants'][molecule_state_]['value']
             gibbs_energy_of_reaction_item -= val_0 * \
                 reactant['coefficient']
 
             # ! calculate enthalpy of reaction
-            val_1 = data_src[ENTHALPY_OF_FORMATION_STD]['reactants'][molecule_]['value']
+            val_1 = data_src[ENTHALPY_OF_FORMATION_STD]['reactants'][molecule_state_]['value']
             enthalpy_of_reaction_item -= val_1 * \
                 reactant['coefficient']
 
@@ -181,13 +300,16 @@ class ReactionAnalyzer:
         for product in reaction['products']:
             # molecule
             molecule_ = product['molecule']
+            # molecule state
+            molecule_state_ = product['molecule_state']
+
             # ! calculate gibbs energy of reaction
-            val_0 = data_src[GIBBS_FREE_ENERGY_OF_FORMATION_STD]['products'][molecule_]['value']
+            val_0 = data_src[GIBBS_FREE_ENERGY_OF_FORMATION_STD]['products'][molecule_state_]['value']
             gibbs_energy_of_reaction_item += val_0 * \
                 product['coefficient']
 
             # ! calculate enthalpy of reaction
-            val_1 = data_src[ENTHALPY_OF_FORMATION_STD]['products'][molecule_]['value']
+            val_1 = data_src[ENTHALPY_OF_FORMATION_STD]['products'][molecule_state_]['value']
             enthalpy_of_reaction_item += val_1 * \
                 product['coefficient']
 
@@ -220,7 +342,7 @@ class ReactionAnalyzer:
     def component_energy_at_temperature(self,
                                         datasource: Dict[str, Any],
                                         equationsource: Dict[str, Any],
-                                        component_name: str,
+                                        component_names: List[str],
                                         temperature: float,
                                         **kwargs):
         """
@@ -232,8 +354,8 @@ class ReactionAnalyzer:
             The datasource containing the thermodynamic data.
         equationsource : dict
             The equationsource containing the reaction equations.
-        component_name : str
-            The name of the component for which to calculate Gibbs energy and enthalpy.
+        component_names : List[str]
+            The names of the components for which to calculate Gibbs energy and enthalpy.
         temperature : float
             The temperature at which to calculate Gibbs energy.
         kwargs : dict
@@ -319,27 +441,63 @@ class ReactionAnalyzer:
 
             # SECTION: Gibbs energy at temperature
             # NOTE: enthalpy of formation at 298.15 K [kJ/mol]
-            EnFo_src = datasource[component_name]['EnFo']
+            EnFo_src = self.datasource_extractor(
+                # type: ignore
+                datasource, component_names, 'EnFo'
+            )
+
+            # check
+            if EnFo_src is None or EnFo_src == 'None':
+                raise ValueError(
+                    f"Failed to extract Enthalpy of formation for {component_names}.")
+
+            # set values
             EnFo_val = float(EnFo_src['value'])
             EnFo_unit = EnFo_src['unit']
             # to [J/mol]
             EnFo = EnFo_val*1e3
 
             # NOTE: Gibbs free energy of formation at 298.15 K [kJ/mol]
-            GiEnFo_src = datasource[component_name]['GiEnFo']
+            GiEnFo_src = self.datasource_extractor(
+                # type: ignore
+                datasource, component_names, 'GiEnFo'
+            )
+
+            # check
+            if GiEnFo_src is None or GiEnFo_src == 'None':
+                raise ValueError(
+                    f"Failed to extract Gibbs energy of formation for {component_names}.")
+
+            # set values
             GiEnFo_val = float(GiEnFo_src['value'])
             GiEnFo_unit = GiEnFo_src['unit']
             # to [J/mol]
             GiEnFo = GiEnFo_val*1e3
 
             # set equation
-            _eq: TableEquation = equationsource[component_name]['Cp']
+            _eq = self.equationsource_extractor(
+                equationsource, component_names, 'Cp'
+            )
+
+            # check
+            if _eq is None or _eq == 'None':
+                raise ValueError(
+                    f"Failed to extract Cp equation for {component_names}.")
+
+            # check format
+            if not isinstance(_eq, TableEquation):
+                raise ValueError(
+                    f"Invalid Cp equation format for {component_names}.")
 
             # integral [Cp/RT]
             _eq_Cp_integral_Cp__RT = _eq.cal_custom_integral(
                 'Cp/RT', T1=T_ref, T2=T)
             # Cp integral
             _eq_Cp_integral = _eq.cal_integral(T1=T_ref, T2=T)
+            # check
+            if not _eq_Cp_integral:
+                raise ValueError(
+                    f"Failed to calculate Cp integral for {component_names}.")
 
             # !enthalpy of formation at T [J/mol]
             En_T = float(EnFo + (_eq_Cp_integral))
@@ -451,35 +609,39 @@ class ReactionAnalyzer:
         # looping through reactants
         for reactant in reaction['reactants']:
             # molecule name
-            reactant_name = reactant['molecule']
+            molecule_ = reactant['molecule']
+            # molecule state
+            molecule_state_ = reactant['molecule_state']
 
             # calculate Gibbs energy and enthalpy at T
             res__ = self.component_energy_at_temperature(
                 datasource,
                 equationsource,
-                reactant_name,
+                [molecule_, molecule_state_],
                 T
             )
 
             # save
-            thermodb['parms']['reactants'][reactant_name] = res__
+            thermodb['parms']['reactants'][molecule_state_] = res__
 
         # SECTION: product energy analysis
         # looping through products
         for product in reaction['products']:
             # molecule name
-            product_name = product['molecule']
+            molecule_ = product['molecule']
+            # molecule state
+            molecule_state_ = product['molecule_state']
 
             # calculate Gibbs energy and enthalpy at T
             res__ = self.component_energy_at_temperature(
                 datasource,
                 equationsource,
-                product_name,
+                [molecule_, molecule_state_],
                 T
             )
 
             # save
-            thermodb['parms']['products'][product_name] = res__
+            thermodb['parms']['products'][molecule_state_] = res__
 
         # SECTION: calculate Gibbs energy of reaction
         # overall energy analysis
@@ -489,7 +651,7 @@ class ReactionAnalyzer:
         # NOTE: looping through reactants
         for reactant in reaction['reactants']:
             # reactant name
-            reactant_name = reactant['molecule']
+            reactant_name = reactant['molecule_state']
             # src
             src_ = thermodb['parms']['reactants'][reactant_name]
 
@@ -503,7 +665,7 @@ class ReactionAnalyzer:
         # NOTE: looping through products
         for product in reaction['products']:
             # product name
-            product_name = product['molecule']
+            product_name = product['molecule_state']
             # src
             src_ = thermodb['parms']['products'][product_name]
 

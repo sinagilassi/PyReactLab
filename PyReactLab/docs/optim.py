@@ -8,7 +8,7 @@ from scipy.optimize import Bounds, NonlinearConstraint
 # local
 from ..configs import (
     R_CONST_J__molK, DATASOURCE, EQUATIONSOURCE,
-    PRESSURE_REF_Pa, TEMPERATURE_REF_K
+    PRESSURE_REF_Pa, TEMPERATURE_REF_K, EOS_MODELS, ACTIVITY_MODELS
 )
 
 
@@ -98,10 +98,11 @@ class ReactionOptimizer:
     @property
     def eos(self):
         '''Get eos class'''
+        # check
         return self._eos
 
     @eos.setter
-    def eos(self, value: str):
+    def eos(self, value: Any):
         '''Set eos class'''
         # set
         self._eos = value
@@ -134,7 +135,7 @@ class ReactionOptimizer:
         return self._activity
 
     @activity.setter
-    def activity(self, value: str):
+    def activity(self, value: Any):
         '''Set activity model'''
         # set
         self._activity = value
@@ -414,7 +415,7 @@ class ReactionOptimizer:
                                       Xfs: Dict[str, float],
                                       P: float,
                                       T: float,
-                                      equilibrium_constants: Dict[str, float],
+                                      equilibrium_constants: Dict[str, Dict[str, Any]],
                                       phase: Literal[
                                           "liquid", "gas"
                                       ] = "gas",
@@ -497,9 +498,14 @@ class ReactionOptimizer:
                 # NOTE: eos model
                 eos_model = self.eos_model
 
+                # Validate the model name
+                if eos_model not in EOS_MODELS:
+                    raise ValueError(
+                        f"Invalid EOS model: {eos_model}. Must be {EOS_MODELS}.")
+
                 # NOTE: calculate fugacity
                 res_ = self._cal_fugacity_coefficient_gaseous_mixture(
-                    model_name=eos_model,
+                    model_name=eos_model,  # type: ignore
                     model_input=model_input)
                 # update
                 fugacity_coeff = {**res_}
@@ -520,8 +526,11 @@ class ReactionOptimizer:
             if self.solution.lower() == "non-ideal":
 
                 # prepare model input
+                # Ensure activity_inputs is a dictionary before unpacking
+                activity_inputs = self.activity_inputs or {}
+                # set
                 model_inputs = {
-                    "mole_fraction": Xfs, **self.activity_inputs
+                    "mole_fraction": Xfs, **activity_inputs
                 }
 
                 # NOTE: check model name
@@ -535,7 +544,7 @@ class ReactionOptimizer:
                         model_name='UNIQUAC', model_input=model_inputs)
                 else:
                     raise ValueError(
-                        f"Invalid activity model: {self.activity_model}. Must be 'NRTL' or 'UNIQUAC'.")
+                        f"Invalid activity model: {self.activity_model}. Must be {ACTIVITY_MODELS}.")
             elif self.solution.lower() == "ideal":
                 # set
                 for i, key in enumerate(self.component_dict.keys()):
@@ -555,26 +564,44 @@ class ReactionOptimizer:
                 # numerator
                 numerator = 1
 
+                # state count
+                state_count_ = self.reaction_analysis[reaction]['state_count']
+
                 # SECTION: loop over reactants
                 for item in self.reaction_analysis[reaction]['reactants']:
                     # NOTE: item info
                     molecule_ = item['molecule']
+                    molecule_state_ = item['molecule_state']
                     coefficient_ = item['coefficient']
                     state_ = item['state']
 
                     # final mole fraction
-                    Xfs_ = Xfs[molecule_]
+                    Xfs_ = Xfs[molecule_state_]
 
                     # NOTE: cal
                     # check phase
                     if state_ == "g":
                         # set
                         term_ = Xfs_ * (P / self.P_Ref_bar) * \
-                            fugacity_coeff[molecule_]
+                            fugacity_coeff[molecule_state_]
                     elif state_ == "l":
+                        # check solution
+                        if self.solution.lower() == "non-ideal":
+                            # Lewis-Randall/Raoult
+                            term_ = Xfs_ * activity_coeff[molecule_state_]
+                        elif self.solution.lower() == "ideal":
+                            # check
+                            if state_count_['l'] == 1:
+                                # pure liquid
+                                term_ = 1
+                        else:
+                            raise ValueError(
+                                "Invalid liquid mixture mode. Must be 'ideal' or 'non-ideal'.")
+
+                    elif state_ == "s":
                         # set
-                        # Lewis-Randall/Raoult
-                        term_ = Xfs_ * activity_coeff[molecule_]
+                        # solid always has the activity of 1
+                        term_ = 1
                     else:
                         raise ValueError(
                             "Invalid phase. Must be 'gas' or 'liquid'.")
@@ -586,21 +613,36 @@ class ReactionOptimizer:
                 for item in self.reaction_analysis[reaction]['products']:
                     # NOTE: item info
                     molecule_ = item['molecule']
+                    molecule_state_ = item['molecule_state']
                     coefficient_ = item['coefficient']
                     state_ = item['state']
 
                     # final mole fraction
-                    Xfs_ = Xfs[molecule_]
+                    Xfs_ = Xfs[molecule_state_]
 
                     # NOTE: cal
                     # check phase
                     if state_ == "g":
                         # set
                         term_ = Xfs_ * (P / self.P_Ref_bar) * \
-                            fugacity_coeff[molecule_]
+                            fugacity_coeff[molecule_state_]
                     elif state_ == "l":
+                        # check solution
+                        if self.solution.lower() == "non-ideal":
+                            # Lewis-Randall/Raoult
+                            term_ = Xfs_ * activity_coeff[molecule_state_]
+                        elif self.solution.lower() == "ideal":
+                            # check
+                            if state_count_['l'] == 1:
+                                # pure liquid
+                                term_ = 1
+                        else:
+                            raise ValueError(
+                                "Invalid liquid mixture mode. Must be 'ideal' or 'non-ideal'.")
+                    elif state_ == "s":
                         # set
-                        term_ = Xfs_ * activity_coeff[molecule_]
+                        # solid always has the activity of 1
+                        term_ = 1
                     else:
                         raise ValueError(
                             "Invalid phase. Must be 'gas' or 'liquid'.")
@@ -658,9 +700,16 @@ class ReactionOptimizer:
             }
 
             # NOTE: calculate fugacity
-            res = self.eos.cal_fugacity_mixture(model_name=model_name,
-                                                model_input=model_input,
-                                                model_source=model_source)
+            eos = self.eos
+
+            # check
+            if eos is None or eos == 'None':
+                raise ValueError(
+                    f"Invalid EOS model. Must be {EOS_MODELS}.")
+
+            res = eos.cal_fugacity_mixture(model_name=model_name,
+                                           model_input=model_input,
+                                           model_source=model_source)
 
             # NOTE: extract fugacity coefficient for each component
             res_1 = res['vapor']
@@ -714,6 +763,10 @@ class ReactionOptimizer:
             #     "datasource": self.datasource,
             #     "equationsource": self.equationsource
             # }
+            # check activity
+            if self.activity is None or self.activity == 'None':
+                raise ValueError(
+                    f"Invalid activity model. Must be {ACTIVITY_MODELS}.")
 
             # NOTE: model name
             if model_name == "NRTL":
