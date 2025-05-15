@@ -65,11 +65,11 @@ CH3OH = ptdb.load_thermodb(f'{data_folder}/methanol-1.pkl')
 
 # Configure thermodynamic database
 thub1 = ptdblink.init()
-thub1.add_thermodb('CO2', CO2)
-thub1.add_thermodb('H2', H2)
-thub1.add_thermodb('CO', CO)
-thub1.add_thermodb('H2O', H2O)
-thub1.add_thermodb('CH3OH', CH3OH)
+thub1.add_thermodb('CO2-g', CO2)
+thub1.add_thermodb('H2-g', H2)
+thub1.add_thermodb('CO-g', CO)
+thub1.add_thermodb('H2O-g', H2O)
+thub1.add_thermodb('CH3OH-g', CH3OH)
 thermodb_config_file = os.path.join(current_dir, 'thermodb_config_link.yml')
 thub1.config_thermodb_rule(thermodb_config_file)
 datasource, equationsource = thub1.build()
@@ -92,13 +92,13 @@ print(f'K_eq: {res_}')
 
 # Perform equilibrium calculation
 inputs = {
-    'mole': {'CO2': 1, 'H2': 3, 'CO': 1, 'H2O': 0.001, 'CH3OH': 0.001},
+    'mole': {'CO2-g': 1, 'H2-g': 3, 'CO-g': 1, 'H2O-g': 0.001, 'CH3OH-g': 0.001},
     'temperature': [100, "C"],
     'pressure': [1.0, "bar"],
 }
 res_ = reaction_system.equilibrium(
     inputs=inputs,
-    conversion=['CO2'],
+    conversion=['CO2-g'],
     method='minimize',
     gas_mixture='ideal',
     solution='ideal',
