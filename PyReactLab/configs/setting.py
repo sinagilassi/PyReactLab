@@ -4,7 +4,7 @@
 # package name
 __package__ = 'PyReactLab '
 # version
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 # author
 __author__ = "Sina Gilassi"
 # email

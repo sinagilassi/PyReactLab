@@ -2,7 +2,7 @@
 
 ![PyReactLab](https://drive.google.com/uc?export=view&id=1lJqEBwChS8iCN3WcfYVk6Sv-HqAlzEIB)
 
-![Downloads](https://img.shields.io/pypi/dm/pyreactlab)
+![Downloads](https://img.shields.io/pypi/dm/PyReactLab)
 ![PyPI](https://img.shields.io/pypi/v/PyReactLab)
 ![Python Version](https://img.shields.io/pypi/pyversions/PyReactLab.svg)
 ![License](https://img.shields.io/pypi/l/PyReactLab)
@@ -80,6 +80,11 @@ datasource, equationsource = thub1.build()
 
 # Create reaction system
 model_source = {"datasource": datasource, "equationsource": equationsource}
+
+# create a reaction system
+# option 1: create_gas_rxn
+# option 2: create_liquid_rxn
+# option 3: create_rxn
 reaction_system = prl.create_rxn(
     system_name='Methanol Synthesis',
     reactions=reactions,
