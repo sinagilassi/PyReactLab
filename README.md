@@ -2,7 +2,11 @@
 
 ![PyReactLab](https://drive.google.com/uc?export=view&id=1lJqEBwChS8iCN3WcfYVk6Sv-HqAlzEIB)
 
-![Downloads](https://img.shields.io/pypi/dm/PyReactLab) ![PyPI](https://img.shields.io/pypi/v/PyReactLab) ![Python Version](https://img.shields.io/pypi/pyversions/PyReactLab.svg) ![License](https://img.shields.io/pypi/l/PyReactLab) ![Read the Docs](https://img.shields.io/readthedocs/PyReactLab)
+![Downloads](https://img.shields.io/pypi/dm/pyreactlab)
+![PyPI](https://img.shields.io/pypi/v/PyReactLab)
+![Python Version](https://img.shields.io/pypi/pyversions/PyReactLab.svg)
+![License](https://img.shields.io/pypi/l/PyReactLab)
+![Read the Docs](https://img.shields.io/readthedocs/PyReactLab)
 
 PyReactLab is an open-source Python package designed to analyze chemical reactions and theoretically assess their thermodynamic feasibility. It provides a robust and flexible framework for studying chemical reaction systems, making it an ideal tool for researchers, engineers, and scientists working in chemistry, chemical engineering, and related disciplines.
 
