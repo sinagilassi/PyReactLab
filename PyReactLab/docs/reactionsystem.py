@@ -356,6 +356,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
         - tau: dict, tau values for the components.
 
         For both models, dU or a, b, c, and d are required to calculate tau in case tau is not provided. All values should be introduced in the `inputs` as:
+
         ```python
         inputs = {
             'mole': mole,
