@@ -1,7 +1,13 @@
 # import libs
 from typing import List, Dict, Any, Literal, Optional
 # local
-from .docs import ReactionSystem, Reaction, ReferenceManager, GasReactionSystem, LiquidReactionSystem
+from .docs import (
+    ReactionSystem,
+    Reaction,
+    ReferenceManager,
+    GasReactionSystem,
+    LiquidReactionSystem
+)
 from .utils import model_source_checker
 from .configs import DATASOURCE, EQUATIONSOURCE
 
@@ -20,7 +26,8 @@ def create_rxn(
         system_name: str,
         reactions: List[Dict[str, str]],
         model_source: Dict[str, Any],
-        **kwargs) -> ReactionSystem:
+        **kwargs
+) -> ReactionSystem:
     """
     Create a reaction system.
 
@@ -72,7 +79,8 @@ def create_gas_rxn(
         system_name: str,
         reactions: List[Dict[str, str]],
         model_source: Dict[str, Any],
-        **kwargs) -> ReactionSystem:
+        **kwargs
+) -> ReactionSystem:
     """
     Create a gaseous reaction system in that the compounds are in the gas phase and defined as `compound(g)`.
 
@@ -130,7 +138,8 @@ def create_liquid_rxn(
         system_name: str,
         reactions: List[Dict[str, str]],
         model_source: Dict[str, Any],
-        **kwargs) -> ReactionSystem:
+        **kwargs
+) -> ReactionSystem:
     """
     Create a liquid reaction system in that the compounds are in liquid phase and defined as `compound(l)`.
 

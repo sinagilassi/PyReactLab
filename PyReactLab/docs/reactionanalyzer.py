@@ -119,11 +119,13 @@ class ReactionAnalyzer:
             raise KeyError(
                 f"Equation '{equation_name}' not found for component '{component_id}'.") from e
 
-    def energy_analysis(self,
-                        datasource: Dict[str, Any],
-                        equationsource: Dict[str, Any],
-                        reaction: Dict[str, Any],
-                        **kwargs):
+    def energy_analysis(
+        self,
+        datasource: Dict[str, Any],
+        equationsource: Dict[str, Any],
+        reaction: Dict[str, Any],
+        **kwargs
+    ):
         '''
         Performs energy analysis of a reaction at STP
 
@@ -339,12 +341,14 @@ class ReactionAnalyzer:
         # res
         return data_src
 
-    def component_energy_at_temperature(self,
-                                        datasource: Dict[str, Any],
-                                        equationsource: Dict[str, Any],
-                                        component_names: List[str],
-                                        temperature: float,
-                                        **kwargs):
+    def component_energy_at_temperature(
+        self,
+        datasource: Dict[str, Any],
+        equationsource: Dict[str, Any],
+        component_names: List[str],
+        temperature: float,
+        **kwargs
+    ):
         """
         Calculate Gibbs and enthalpy energies at a given temperature.
 
@@ -499,7 +503,7 @@ class ReactionAnalyzer:
                 raise ValueError(
                     f"Failed to calculate Cp integral for {component_names}.")
 
-            # !enthalpy of formation at T [J/mol]
+            # ! enthalpy of formation at T [J/mol]
             En_T = float(EnFo + (_eq_Cp_integral))
 
             # ! Gibbs free energy of formation at T [J/mol]
@@ -540,12 +544,14 @@ class ReactionAnalyzer:
             raise Exception(
                 f"Error in ReactionAnalyzer.Gibbs_energy_at_temperature(): {str(e)}") from e
 
-    def reaction_energy_analysis(self,
-                                 datasource: Dict[str, Any],
-                                 equationsource: Dict[str, Any],
-                                 temperature: float,
-                                 reaction: dict,
-                                 **kwargs):
+    def reaction_energy_analysis(
+        self,
+        datasource: Dict[str, Any],
+        equationsource: Dict[str, Any],
+        temperature: float,
+        reaction: dict,
+        **kwargs
+    ):
         '''
         Calculates change in Gibbs free energy and enthalpy of a reaction at different temperatures.
 
@@ -692,12 +698,14 @@ class ReactionAnalyzer:
         # res
         return thermodb
 
-    def vh(self,
-            datasource: Dict[str, Any],
-            equationsource: Dict[str, Any],
-            temperature: float,
-            reaction: dict,
-            **kwargs):
+    def vh(
+        self,
+        datasource: Dict[str, Any],
+        equationsource: Dict[str, Any],
+        temperature: float,
+        reaction: dict,
+        **kwargs
+    ):
         '''
         Calculates change in Gibbs free energy of a reaction at different temperatures using the Van't Hoff equation.
 
@@ -766,15 +774,17 @@ class ReactionAnalyzer:
             raise Exception(
                 f"Error in ReactionAnalyzer.vh(): {str(e)}") from e
 
-    def vh_shortcut(self,
-                    datasource: Dict[str, Any],
-                    equationsource: Dict[str, Any],
-                    temperature: float,
-                    enthalpy_of_reaction_std: float,
-                    equilibrium_constant_std: float,
-                    reaction_name: str,
-                    reaction_body: str,
-                    **kwargs):
+    def vh_shortcut(
+        self,
+        datasource: Dict[str, Any],
+        equationsource: Dict[str, Any],
+        temperature: float,
+        enthalpy_of_reaction_std: float,
+        equilibrium_constant_std: float,
+        reaction_name: str,
+        reaction_body: str,
+        **kwargs
+    ):
         """
         Shortcut for Van't Hoff equation.
 
@@ -906,9 +916,11 @@ class ReactionAnalyzer:
         return initial_moles
 
     @staticmethod
-    def set_stream(component_dict: Dict[str, int | float],
-                   mole: Dict[str, int | float],
-                   mole_fraction: Dict[str, int | float]):
+    def set_stream(
+        component_dict: Dict[str, int | float],
+        mole: Dict[str, int | float],
+        mole_fraction: Dict[str, int | float]
+    ):
         """
         Set the stream of components in a reaction system.
 
@@ -969,7 +981,8 @@ class ReactionAnalyzer:
     def cal_conversion(
             initial_mole: Dict[str, float | int],
             final_mole: Dict[str, float | int],
-            components: List[str]):
+            components: List[str]
+    ):
         '''
         Calculate conversion
 

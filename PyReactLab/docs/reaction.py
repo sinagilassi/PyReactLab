@@ -172,11 +172,13 @@ class Reaction():
             raise Exception(
                 f"Failing in finding the reaction state: {str(e)}") from e
 
-    def cal_equilibrium_constant(self,
-                                 temperature: List[float | str],
-                                 method: Literal[
-                                     "van't Hoff", "shortcut van't Hoff"
-                                 ] = "van't Hoff") -> Dict[str, Any]:
+    def cal_equilibrium_constant(
+        self,
+        temperature: List[float | str],
+        method: Literal[
+            "van't Hoff", "shortcut van't Hoff"
+        ] = "van't Hoff"
+    ) -> Dict[str, Any]:
         """
         Calculate the equilibrium constant at a given temperature using the van't Hoff equation.
 
@@ -255,7 +257,10 @@ class Reaction():
             raise Exception(
                 f"Error in ReactionSystem.Keq_T(): {str(e)}") from e
 
-    def cal_reaction_energy(self, temperature: List[float | str]) -> Dict[str, Any]:
+    def cal_reaction_energy(
+        self,
+        temperature: List[float | str]
+    ) -> Dict[str, Any]:
         """
         Calculate the reaction energy at a given temperature which consists of the following:
         - Gibbs free energy of reaction at T

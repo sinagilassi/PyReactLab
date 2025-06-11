@@ -306,7 +306,9 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                     solution: Literal[
                         "ideal", "non-ideal"
                     ] = "ideal",
-                    method: Literal['minimize', 'least_squares'] = 'minimize',
+                    method: Literal[
+                        'minimize', 'least_squares'
+                    ] = 'minimize',
                     **kwargs):
         """
         Calculate the equilibrium state of the reaction system.
@@ -557,7 +559,8 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             ReactionOptimizer_.activity = ptm.activities(
                 components=self.component_list,
                 model_name=activity_model,
-                model_source=self.model_source,)
+                model_source=self.model_source,
+            )
 
             # solution
             ReactionOptimizer_.solution = solution
