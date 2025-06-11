@@ -11,7 +11,6 @@ from .refmanager import ReferenceManager
 from .reactionanalyzer import ReactionAnalyzer
 from .optim import ReactionOptimizer
 from ..utils import ChemReactUtils
-from .reaction import Reaction
 
 
 class ReactionSystem(ThermoLinkDB, ReferenceManager):
@@ -205,6 +204,12 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
 
                 # NOTE: energy analysis
                 reaction_ = self.__reaction_list[name]
+                # ! energy analysis to get the following results:
+                # ? gibbs free energy of formation (std)
+                # ? enthalpy of formation (std)
+                # ? gibbs free energy of reaction (std)
+                # ? enthalpy of reaction (std)
+                # ? equilibrium constant (std)
                 _res = reaction_.energy_analysis
 
                 # save
@@ -225,13 +230,15 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             raise Exception(
                 f"Error in ReactionSystem.go(): {str(e)}") from e
 
-    def reaction_equilibrium_constant(self,
-                                      reaction_name: str,
-                                      temperature: list[float | str],
-                                      method: Literal[
-                                          "van't Hoff", "shortcut van't Hoff"
-                                      ] = "van't Hoff",
-                                      **kwargs):
+    def reaction_equilibrium_constant(
+        self,
+        reaction_name: str,
+        temperature: list[float | str],
+        method: Literal[
+            "van't Hoff", "shortcut van't Hoff"
+        ] = "van't Hoff",
+        **kwargs
+    ):
         """
         Calculate the equilibrium constant at a given temperature using the van't Hoff equation.
 
@@ -284,7 +291,9 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
 
             # NOTE: calculate equilibrium constant at the given temperature
             res = reaction.cal_equilibrium_constant(
-                temperature, method=method)
+                temperature,
+                method=method
+            )
 
             # NOTE: message
             message = kwargs.get("message", None)
@@ -297,19 +306,21 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             raise Exception(
                 f"Error in ReactionSystem.equilibrium_constant_at_temperature(): {str(e)}") from e
 
-    def equilibrium(self,
-                    inputs: Dict[str, Any],
-                    conversion: Optional[List[str]] = None,
-                    gas_mixture: Literal[
-                        "ideal", "non-ideal"
-                    ] = "ideal",
-                    solution: Literal[
-                        "ideal", "non-ideal"
-                    ] = "ideal",
-                    method: Literal[
-                        'minimize', 'least_squares'
-                    ] = 'minimize',
-                    **kwargs):
+    def equilibrium(
+        self,
+        inputs: Dict[str, Any],
+        conversion: Optional[List[str]] = None,
+        gas_mixture: Literal[
+            "ideal", "non-ideal"
+        ] = "ideal",
+        solution: Literal[
+            "ideal", "non-ideal"
+        ] = "ideal",
+        method: Literal[
+            'minimize', 'least_squares'
+        ] = 'minimize',
+        **kwargs
+    ):
         """
         Calculate the equilibrium state of the reaction system.
 

@@ -97,6 +97,8 @@ reaction_system = prl.create_gas_rxn(
     model_source=model_source
 )
 
+# SECTION: REACTION SYSTEM PROPERTIES
+
 # Keq at T
 res_ = reaction_system.reaction_equilibrium_constant(
     'Methanol Formation by CO2-Hydrogenation',
@@ -125,7 +127,8 @@ print(f'K_eq_300: {K_eq_300}')
 res_ = R1.cal_reaction_energy([300.0, "K"])
 print(f'En_rxn: {res_}')
 
-# SECTION: equilibrium calculation
+# SECTION: EQUILIBRIUM CALCULATION
+
 # NOTE: mole fraction
 mole_fraction = {
     'CO2-g': 1,

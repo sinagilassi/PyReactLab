@@ -99,7 +99,8 @@ class Reaction():
             energy_analysis = self.ReactionAnalyzer_.energy_analysis(
                 self.datasource,
                 self.equationsource,
-                _input)
+                _input
+            )
 
             # update
             self.reaction_name = name
