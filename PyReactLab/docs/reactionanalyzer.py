@@ -3,6 +3,7 @@ from typing import Dict, Any, List, Literal, Optional
 from math import exp
 from pyThermoDB import TableEquation, TableMatrixEquation, TableData, TableMatrixData
 import pycuc
+from scipy import integrate
 #  local
 from ..configs import (
     R_CONST_J__molK, DATASOURCE, EQUATIONSOURCE,
@@ -478,26 +479,73 @@ class ReactionAnalyzer:
             # to [J/mol]
             GiEnFo = GiEnFo_val*1e3
 
-            # set equation
+            # NOTE: set equation
+            # ! extract Cp equation
             _eq = self.equationsource_extractor(
-                equationsource, component_names, 'Cp'
+                equationsource,
+                component_names,
+                'Cp'
             )
 
             # check
             if _eq is None or _eq == 'None':
                 raise ValueError(
-                    f"Failed to extract Cp equation for {component_names}.")
+                    f"Failed to extract Cp equation for {component_names}."
+                )
 
             # check format
             if not isinstance(_eq, TableEquation):
                 raise ValueError(
-                    f"Invalid Cp equation format for {component_names}.")
+                    f"Invalid Cp equation format for {component_names}."
+                )
 
-            # integral [Cp/RT]
-            _eq_Cp_integral_Cp__RT = _eq.cal_custom_integral(
-                'Cp/RT', T1=T_ref, T2=T)
-            # Cp integral
-            _eq_Cp_integral = _eq.cal_integral(T1=T_ref, T2=T)
+            # NOTE: integral [Cp/RT]
+            # method 1
+            # _eq_Cp_integral_Cp__RT = _eq.cal_custom_integral(
+            #     'Cp/RT',
+            #     T1=T_ref,
+            #     T2=T
+            # )
+
+            # method 2
+            def integrand_0(T):
+                cal_ = _eq.cal(T=T).get('value', None)
+                if cal_ is None:
+                    raise ValueError(
+                        f"Failed to calculate Cp for {component_names} at T={T} K.")
+                res = cal_/(T*R)
+                return res
+
+            # cal
+            _eq_Cp_integral_Cp__RT, _ = integrate.quad(
+                integrand_0,
+                T_ref,
+                T
+            )
+
+            # NOTE: Cp integral
+            # method 1
+            # _eq_Cp_integral = _eq.cal_integral(
+            #     T1=T_ref,
+            #     T2=T
+            # )
+
+            # method 2
+            def integrand_1(T):
+                cal_ = _eq.cal(T=T).get('value', None)
+                if cal_ is None:
+                    raise ValueError(
+                        f"Failed to calculate Cp for {component_names} at T={T} K.")
+                # to [J/mol.K]
+                return cal_
+
+            # cal
+            _eq_Cp_integral, _ = integrate.quad(
+                integrand_1,
+                T_ref,
+                T
+            )
+
             # check
             if not _eq_Cp_integral:
                 raise ValueError(

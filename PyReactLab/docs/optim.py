@@ -669,11 +669,13 @@ class ReactionOptimizer:
             raise Exception(
                 f"Error in building the reaction equilibrium equation for {phase}: {str(e)}") from e
 
-    def _cal_fugacity_coefficient_gaseous_mixture(self,
-                                                  model_name: Literal[
-                                                      "SRK", "PR", "RK"
-                                                  ],
-                                                  model_input: Dict[str, Any]):
+    def _cal_fugacity_coefficient_gaseous_mixture(
+        self,
+        model_name: Literal[
+            "SRK", "PR", "RK"
+        ],
+        model_input: Dict[str, Any]
+    ):
         """
         Calculate the fugacity coefficient of gaseous mixture using the specified EOS model.
 
@@ -727,12 +729,13 @@ class ReactionOptimizer:
             raise Exception(
                 f"Error in calculating the fugacity coefficient for the gaseous mixture: {str(e)}") from e
 
-    def _cal_activity_coefficient_solution(self,
-                                           model_name: Literal[
-                                               'NRTL', 'UNIQUAC'
-                                           ],
-                                           model_input: Dict[str, Any],
-                                           ):
+    def _cal_activity_coefficient_solution(
+        self,
+        model_name: Literal[
+            'NRTL', 'UNIQUAC'
+        ],
+        model_input: Dict[str, Any],
+    ):
         """
         Calculate the activity coefficient of solution using the specified model.
 

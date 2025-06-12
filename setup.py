@@ -31,8 +31,10 @@ setup(
     license='MIT',
     license_files=[],
     install_requires=['numpy',
-                      'PyYAML', 'PyCUC',
-                      'scipy', 'PyThermoModels',
+                      'PyYAML',
+                      'PyCUC',
+                      'scipy',
+                      'PyThermoModels',
                       'PyThermoDB'],
     extras_require={
         "plotting": ["matplotlib"],

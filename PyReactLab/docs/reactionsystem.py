@@ -11,6 +11,7 @@ from .refmanager import ReferenceManager
 from .reactionanalyzer import ReactionAnalyzer
 from .optim import ReactionOptimizer
 from ..utils import ChemReactUtils
+from .chemicalpotential import ChemicalPotential
 
 
 class ReactionSystem(ThermoLinkDB, ReferenceManager):
@@ -223,7 +224,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             self.component_dict = component_dict
             self.coeff_list_dict = comp_list
             self.coeff_list_list = comp_coeff
-            self.coeff_T_list_list = comp_coeff_t
+            self.coeff_T_list_list = comp_coeff_t  # transpose
             self.energy_analysis = energy_analysis
 
         except Exception as e:
@@ -415,7 +416,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             if not isinstance(temperature[1], str):
                 raise ValueError("Temperature unit must be a string.")
 
-            # ! convert to K
+            # ! convert to **K**
             # set unit
             unit_set = f"{temperature[1]} => K"
             temperature_K = pycuc.to(temperature[0], unit_set)
@@ -438,7 +439,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             if not isinstance(pressure[1], str):
                 raise ValueError("Pressure unit must be a string.")
 
-            # ! convert to bar
+            # ! convert to **bar**
             # set unit
             unit_set = f"{pressure[1]} => bar"
             pressure_bar = pycuc.to(pressure[0], unit_set)
@@ -738,3 +739,279 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
         except Exception as e:
             raise Exception(
                 f"Failing in the equilibrium calculations {str(e)}") from e
+
+    def equilibrium_deviation(
+        self,
+        inputs: Dict[str, Any],
+        gas_mixture: Literal[
+            "ideal", "non-ideal"
+        ] = "ideal",
+        solution: Literal[
+            "ideal", "non-ideal"
+        ] = "ideal",
+        solver_method: Literal[
+            'minimize', 'least_squares'
+        ] = 'minimize',
+        **kwargs
+    ):
+        """
+        Conduct equilibrium deviation calculations for the reaction system.
+
+        This method calculates the actual Gibbs free energy of reaction (GiEn_rxn_T) at a given temperature and pressure, and component composition.
+
+        There are three cases as:
+        - Case 1: `GiEn_rxn_T < 0`, the reaction is not at equilibrium and the reaction will proceed in the forward direction.
+        - Case 2: `GiEn_rxn_T > 0`, the reaction is not at equilibrium and the reaction will proceed in the reverse direction.
+        - Case 3: `GiEn_rxn_T = 0`, the reaction is at equilibrium and no further reaction will occur.
+
+        Parameters
+        ----------
+        inputs : dict
+            Inputs for the equilibrium deviation calculation.
+        conversion : list, optional
+            List of components to calculate conversion for, by default None.
+        gas_mixture : str, optional
+            Type of gas mixture, by default "ideal".
+        solution : str, optional
+            Type of liquid mixture, by default "ideal".
+        solver_method : str, optional
+            Method for the calculation, by default "minimize".
+            Options are "minimize" or "least_squares".
+        **kwargs : dict
+            Additional arguments for the calculation.
+                - eos_model: Equation of state model to use for the calculation. Options are "SRK" or "PR".
+                - activity_model: Activity model to use for the calculation. Options are "NRTL" or "UNIFAC".
+                - message: Optional message to display during the calculation.
+
+        Returns
+        -------
+        dict
+            Equilibrium deviation of the reaction system.
+
+        Notes
+        -----
+        The inputs and kwargs are similar to those in the `equilibrium` method.
+        """
+        # NOTE: call equilibrium method with deviation=True
+        try:
+            # ! Start timing
+            start_time = time.time()
+
+            if not self.overall_reaction_phase:
+                raise ValueError(
+                    "Overall reaction phase is not set. Please run the primary analysis first.")
+
+            # SECTION: check args
+            # NOTE: check if inputs are valid
+            if not isinstance(inputs, dict):
+                raise ValueError("Inputs must be a dictionary.")
+            # check if inputs are valid
+            if not any(key in inputs for key in ["mole_fraction", "mole"]):
+                raise ValueError(
+                    "Inputs must contain either mole_fraction or mole.")
+            if "temperature" not in inputs:
+                raise ValueError("Inputs must contain temperature.")
+            if "pressure" not in inputs:
+                raise ValueError("Inputs must contain pressure.")
+
+            # NOTE: check if temperature is valid
+            # set
+            temperature = inputs["temperature"]
+            # check if temperature is valid
+            if not isinstance(temperature, list):
+                raise ValueError("Temperature must be a number.")
+
+            # check if temperature is valid
+            if len(temperature) != 2:
+                raise ValueError(
+                    "Temperature must be a list of length 2 following [value, unit].")
+
+            if not isinstance(temperature[0], (int, float)):
+                raise ValueError("Temperature must be a number.")
+
+            if not isinstance(temperature[1], str):
+                raise ValueError("Temperature unit must be a string.")
+
+            # ! convert to **K**
+            # set unit
+            unit_set = f"{temperature[1]} => K"
+            temperature_K = pycuc.to(temperature[0], unit_set)
+
+            # NOTE: check if pressure is valid
+            # set
+            pressure = inputs["pressure"]
+            # check if pressure is valid
+            if not isinstance(pressure, list):
+                raise ValueError("Pressure must be a number.")
+
+            # check if pressure is valid
+            if len(pressure) != 2:
+                raise ValueError(
+                    "Pressure must be a list of length 2 following [value, unit].")
+
+            if not isinstance(pressure[0], (int, float)):
+                raise ValueError("Pressure must be a number.")
+
+            if not isinstance(pressure[1], str):
+                raise ValueError("Pressure unit must be a string.")
+
+            # ! convert to **bar**
+            # set unit
+            unit_set = f"{pressure[1]} => bar"
+            pressure_bar = pycuc.to(pressure[0], unit_set)
+
+            # NOTE: check if initial mole fraction is valid
+            # set
+            initial_mole_fraction = inputs.get("mole_fraction", None)
+            # check
+            initial_mole = inputs.get("mole", None)
+
+            if initial_mole_fraction is not None:
+                # check if initial mole fraction is valid
+                if not isinstance(initial_mole_fraction, dict):
+                    raise ValueError(
+                        "Initial mole fraction must be a dictionary.")
+
+                # check if initial mole fraction is valid
+                for key in initial_mole_fraction:
+                    if not isinstance(key, str):
+                        raise ValueError(
+                            "Initial mole fraction key must be a string.")
+                    if not isinstance(initial_mole_fraction[key], (int, float)):
+                        raise ValueError(
+                            "Initial mole fraction value must be a number.")
+
+                # ? normalize
+                # check if sum of mole fraction is 1
+                initial_mole_fraction = ReactionAnalyzer.norm_mole_fraction(
+                    initial_mole_fraction)
+
+                # NOTE: convert to mole fraction
+                initial_mole = ReactionAnalyzer.cal_mole(
+                    initial_mole_fraction)
+
+            elif initial_mole is not None:
+                # check if initial mole is valid
+                if not isinstance(initial_mole, dict):
+                    raise ValueError("Initial mole must be a dictionary.")
+
+                # check if initial mole is valid
+                for key in initial_mole:
+                    if not isinstance(key, str):
+                        raise ValueError(
+                            "Initial mole key must be a string.")
+                    if not isinstance(initial_mole[key], (int, float)):
+                        raise ValueError(
+                            "Initial mole value must be a number.")
+
+                # NOTE: convert to mole fraction
+                initial_mole_fraction, _ = ReactionAnalyzer.cal_mole_fraction(
+                    initial_mole)
+
+            # NOTE: build mole and mole fraction matrix regarding the component dict
+            # check
+            if initial_mole is not None and initial_mole_fraction is not None:
+                # set values
+                initial_mole_std, initial_mole_fraction_std, _, _ = ReactionAnalyzer.set_stream(
+                    component_dict=self.component_dict,
+                    mole=initial_mole,
+                    mole_fraction=initial_mole_fraction,
+                )
+            else:
+                raise ValueError(
+                    "Initial mole and mole fraction must be provided.")
+
+            # SECTION: kwargs
+            # eos model (name)
+            eos_model = kwargs.get("eos_model", "SRK")
+            # check if eos model is valid
+            if eos_model not in ["SRK", "PR", 'RK', 'vdW']:
+                raise ValueError(
+                    "Invalid eos model. Options are 'SRK','RK','PR', or 'vdW'.")
+
+            # activity model (name)
+            activity_model = kwargs.get("activity_model", "NRTL")
+            # check if activity model is valid
+            if activity_model not in ["NRTL", "UNIQUAC"]:
+                raise ValueError(
+                    "Invalid activity model. Options are 'NRTL' or 'UNIQUAC'.")
+
+            # SECTION: init chemical potential
+            ChemicalPotential_ = ChemicalPotential(
+                self.datasource,
+                self.equationsource,
+                self.component_dict,
+                self.coeff_list_dict,
+                self.coeff_T_list_list,
+                self.reaction_analysis,
+                self.overall_reaction_analysis,
+                self.overall_reaction_phase
+            )
+
+            # SECTION: setting up the chemical potential
+            # NOTE: set up eos model
+            # ? eos model
+            ChemicalPotential_.eos_model = eos_model
+            # init eos class
+            ChemicalPotential_.eos = ptm.eos()
+
+            # gas mixture
+            ChemicalPotential_.gas_mixture = gas_mixture
+
+            # NOTE: set up activity model
+            # ? activity inputs
+            # NRTL: tau, alpha,
+            # dg or a, b, c, and d are required to calculated tau
+            # UNIQUAC: q, r, tau
+            # dU or a, b, c, and d are required to calculated tau
+            activity_inputs = {**inputs}
+            # remove temperature and pressure
+            activity_inputs.pop("temperature", None)
+            activity_inputs.pop("pressure", None)
+            # remove mole and mole fraction
+            activity_inputs.pop("mole", None)
+            activity_inputs.pop("mole_fraction", None)
+
+            # set
+            if activity_inputs is not None:
+                #  check if activity inputs is valid
+                if not isinstance(activity_inputs, dict):
+                    raise ValueError(
+                        "Activity inputs must be a dictionary.")
+
+                # set
+                ChemicalPotential_.activity_inputs = activity_inputs
+
+            # ? activity model
+            ChemicalPotential_.activity_model = activity_model
+            # init activity class
+            ChemicalPotential_.activity = ptm.activities(
+                components=self.component_list,
+                model_name=activity_model,
+                model_source=self.model_source,
+            )
+
+            # solution
+            ChemicalPotential_.solution = solution
+
+            # SECTION: calculate the actual Gibbs free energy of reaction
+
+            # SECTION: set results
+            # res
+            res = {}
+
+            # NOTE: set time
+            # ! Stop timing
+            end_time = time.time()
+            computation_time = end_time - start_time
+            # add to res
+            res['computation_time'] = {
+                "value": computation_time,
+                "unit": "s"
+            }
+
+            # res
+            return res
+        except Exception as e:
+            raise Exception(
+                f"Failing in the equilibrium deviation calculations {str(e)}") from e
