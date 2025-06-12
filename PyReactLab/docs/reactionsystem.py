@@ -194,6 +194,11 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 # set
                 self.overall_reaction_phase = '-'.join(overall_reaction_phases)
 
+            # SECTION: phase components
+            phase_contents = ChemReactUtils_.reaction_phase_analysis(
+                reaction_res=reaction_res,
+            )
+
             # SECTION: energy analysis
             # energy analysis result list
             energy_analysis = {}
@@ -225,7 +230,8 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             self.coeff_list_dict = comp_list
             self.coeff_list_list = comp_coeff
             self.coeff_T_list_list = comp_coeff_t  # transpose
-            self.energy_analysis = energy_analysis
+            self.energy_analysis = energy_analysis  # energy analysis result
+            self.phase_contents = phase_contents  # phase contents
 
         except Exception as e:
             raise Exception(
@@ -749,9 +755,6 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
         solution: Literal[
             "ideal", "non-ideal"
         ] = "ideal",
-        solver_method: Literal[
-            'minimize', 'least_squares'
-        ] = 'minimize',
         **kwargs
     ):
         """
@@ -774,9 +777,6 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             Type of gas mixture, by default "ideal".
         solution : str, optional
             Type of liquid mixture, by default "ideal".
-        solver_method : str, optional
-            Method for the calculation, by default "minimize".
-            Options are "minimize" or "least_squares".
         **kwargs : dict
             Additional arguments for the calculation.
                 - eos_model: Equation of state model to use for the calculation. Options are "SRK" or "PR".
@@ -921,6 +921,13 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 raise ValueError(
                     "Initial mole and mole fraction must be provided.")
 
+            # SECTION: mole and mole fraction for gas mixture and solution
+            self.phase_stream = ReactionAnalyzer.set_phase_stream(
+                initial_mole=initial_mole_std,
+                initial_mole_fraction=initial_mole_fraction_std,
+                phase_contents=self.phase_contents,
+            )
+
             # SECTION: kwargs
             # eos model (name)
             eos_model = kwargs.get("eos_model", "SRK")
@@ -940,12 +947,13 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             ChemicalPotential_ = ChemicalPotential(
                 self.datasource,
                 self.equationsource,
+                self.__reaction_list,
                 self.component_dict,
                 self.coeff_list_dict,
-                self.coeff_T_list_list,
                 self.reaction_analysis,
+                self.phase_stream,
                 self.overall_reaction_analysis,
-                self.overall_reaction_phase
+                self.overall_reaction_phase,
             )
 
             # SECTION: setting up the chemical potential
@@ -984,6 +992,9 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
 
             # ? activity model
             ChemicalPotential_.activity_model = activity_model
+            # ? set component list (liquid phase)
+            # components_l = self.phase_contents['l']
+
             # init activity class
             ChemicalPotential_.activity = ptm.activities(
                 components=self.component_list,

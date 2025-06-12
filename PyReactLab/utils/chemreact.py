@@ -24,8 +24,10 @@ class ChemReactUtils:
     # available phases
     available_phases = ['gas', 'liquid', 'aqueous', 'solid']
 
-    def __init__(self,
-                 reaction_mode_symbol: Literal["<=>"] = "<=>"):
+    def __init__(
+        self,
+        reaction_mode_symbol: Literal["<=>"] = "<=>"
+    ):
         """
         Initialize the ChemReactUtils class.
 
@@ -83,7 +85,8 @@ class ChemReactUtils:
     def analyze_reaction(
             self,
             reaction_pack: Dict[str, str],
-            phase_rule: Optional[str] = None) -> Dict[str, Any]:
+            phase_rule: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Analyze a chemical reaction and extract relevant information.
 
@@ -627,3 +630,59 @@ class ChemReactUtils:
 
         except Exception as e:
             raise Exception(f"Error determining reaction phase: {e}")
+
+    def reaction_phase_analysis(
+        self,
+        reaction_res: Dict[str, Any],
+    ):
+        '''
+        Analyze the reaction phase and separate reactants and products by their phases.
+
+        Parameters
+        ----------
+        reaction_res: dict
+            A dictionary containing the reaction results, including reactants and products.
+
+        Returns
+        -------
+
+        '''
+        try:
+            # NOTE: initialize phase dict
+            phase_dict = {
+                'g': [],
+                'l': [],
+                'aq': [],
+                's': []
+            }
+
+            # SECTION: Iterate over reactions and classify reactants and products by phase
+            for reaction_name, reaction_data in reaction_res.items():
+                # reactants
+                for reactant in reaction_data['reactants']:
+                    phase = reactant['state']
+                    if phase in phase_dict:
+                        # ! molecule state
+                        phase_dict[phase].append(reactant['molecule_state'])
+                    else:
+                        raise ValueError(
+                            f"Unknown phase '{phase}' for reactant '{reactant['molecule']}'.")
+
+                # products
+                for product in reaction_data['products']:
+                    phase = product['state']
+                    if phase in phase_dict:
+                        # ! molecule state
+                        phase_dict[phase].append(product['molecule_state'])
+                    else:
+                        raise ValueError(
+                            f"Unknown phase '{phase}' for product '{product['molecule']}'.")
+
+            # NOTE: remove duplicates in each phase
+            for phase in phase_dict:
+                phase_dict[phase] = list(set(phase_dict[phase]))
+
+            # res
+            return phase_dict
+        except Exception as e:
+            raise Exception(f"Error analyzing reaction phase: {e}")

@@ -904,9 +904,18 @@ class ReactionAnalyzer:
         # Calculate total mole fraction
         total_mole_fraction = sum(mole_fraction.values())
 
+        # Check if total mole fraction is zero to avoid division by zero
+        if total_mole_fraction == 0:
+            raise ValueError("Total mole fraction is zero, cannot normalize.")
+
         # Normalize mole fraction
         normalized_mole_fraction = {key: value / total_mole_fraction for key,
                                     value in mole_fraction.items()}
+
+        # check any zero mole fraction, set minimum value to 1e-5
+        for key, value in normalized_mole_fraction.items():
+            if value < 1e-5:
+                normalized_mole_fraction[key] = 1e-5
 
         return normalized_mole_fraction
 
@@ -930,9 +939,19 @@ class ReactionAnalyzer:
         # Calculate total mole
         total_mole = sum(initial_moles.values())
 
+        # check if total mole is zero to avoid division by zero
+        if total_mole == 0:
+            raise ValueError(
+                "Total moles are zero, cannot calculate mole fraction.")
+
         # Calculate mole fraction
         mole_fraction = {key: value / total_mole for key,
                          value in initial_moles.items()}
+
+        # check any zero mole fraction, set minimum value to 1e-5
+        for key, value in mole_fraction.items():
+            if value < 1e-5:
+                mole_fraction[key] = 1e-5
 
         # Calculate total mole fraction (verification)
         total_mole_fraction = sum(mole_fraction.values())
@@ -1021,9 +1040,91 @@ class ReactionAnalyzer:
                 mole_fraction_std.append(_mole_fraction)
 
             # return
-            return mole_comp_std, mole_fraction_comp_std, mole_std, mole_fraction_std
+            return (mole_comp_std,
+                    mole_fraction_comp_std,
+                    mole_std,
+                    mole_fraction_std)
         except Exception as e:
             raise Exception(f"Failed to set stream: {str(e)}") from e
+
+    @staticmethod
+    def set_phase_stream(
+        initial_mole: Dict[str, float | int],
+        initial_mole_fraction: Dict[str, float | int],
+        phase_contents: Dict[str, List[str]]
+    ):
+        '''
+        Set new mole and mole fraction for each phase in a reaction system.
+
+        Parameters
+        ----------
+        initial_mole : dict
+            Initial moles of each component.
+        initial_mole_fraction : dict
+            Initial mole fractions of each component.
+        phase_contents : dict
+            Dictionary with phase names as keys and lists of component names as values.
+
+        '''
+        try:
+
+            # NOTE: phase stream
+            phase_stream = {
+                'g': {},
+                'l': {},
+                's': {},
+                'aq': {}
+            }
+
+            # SECTION: separate components by phase
+            for phase, components in phase_contents.items():
+
+                # NOTE: check phase components exists
+                if len(components) == 0:
+                    continue
+
+                # NOTE: loop through the components in the phase
+                for component in components:
+                    # check if component exists in initial_mole and initial_mole_fraction
+                    if component not in initial_mole or component not in initial_mole_fraction:
+                        raise ValueError(
+                            f"Component {component} not found in initial moles or mole fractions.")
+
+                    # set the mole and mole fraction for the phase
+                    phase_stream[phase][component] = {
+                        'mole': initial_mole[component],
+                        'mole_fraction': initial_mole_fraction[component]
+                    }
+
+            # SECTION: calculate new moles and mole fractions for each phase
+            # loop through each phase and its components
+            for phase, components in phase_stream.items():
+
+                # NOTE: check if components are empty
+                if len(components) == 0:
+                    continue
+
+                # NOTE: calculate total mole for the phase
+                total_mole = sum(comp['mole'] for comp in components.values())
+
+                # check if total mole is zero to avoid division by zero
+                if total_mole == 0:
+                    raise ValueError(
+                        f"Total moles for phase {phase} are zero, cannot calculate mole fractions.")
+
+                # calculate new moles and mole fractions for the phase
+                for component, values in components.items():
+                    new_mole_ = values['mole']
+                    new_mole_fraction_ = values['mole'] / total_mole
+
+                    # update the new_mole and new_mole_fraction dictionaries
+                    phase_stream[phase][component]['phase_mole'] = new_mole_
+                    phase_stream[phase][component]['phase_mole_fraction'] = new_mole_fraction_
+
+            # return the new moles and mole fractions
+            return phase_stream
+        except Exception as e:
+            raise Exception(f"Failed to set phase stream: {str(e)}") from e
 
     @staticmethod
     def cal_conversion(

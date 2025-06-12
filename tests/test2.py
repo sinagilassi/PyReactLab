@@ -99,16 +99,16 @@ mole_fraction = {
     'CO2-g': 1,
     'H2-g': 3,
     'CO-g': 1,
-    'H2O-g': 0.1,
-    'CH3OH-g': 0.3
+    'H2O-g': 0,
+    'CH3OH-g': 0
 }
 
 mole = {
     'CO2-g': 1,
     'H2-g': 3,
     'CO-g': 1,
-    'H2O-g': 0.001,
-    'CH3OH-g': 0.001
+    'H2O-g': 0,
+    'CH3OH-g': 0
 }
 
 # NOTE: activity inputs
@@ -125,7 +125,6 @@ inputs = {
 # equilibrium calculation
 res_ = reaction_system.equilibrium_deviation(
     inputs=inputs,
-    method='least_squares',
     gas_mixture='ideal',
     solution='ideal',)
 print(f'Equilibrium: {res_}')

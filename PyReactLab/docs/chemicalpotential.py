@@ -7,6 +7,7 @@ from ..configs import (
     R_CONST_J__molK, DATASOURCE, EQUATIONSOURCE,
     PRESSURE_REF_Pa, TEMPERATURE_REF_K, EOS_MODELS, ACTIVITY_MODELS
 )
+from .reaction import Reaction
 
 
 class ChemicalPotential:
@@ -46,10 +47,11 @@ class ChemicalPotential:
     def __init__(self,
                  datasource: Dict[str, Any],
                  equationsource: Dict[str, Any],
+                 reaction_list: Dict[str, Reaction],
                  component_dict: Dict[str, float | int],
                  comp_list: List[Dict[str, float | int]],
-                 stoichiometric_coeff: np.ndarray,
                  reaction_analysis: Dict,
+                 phase_stream: Dict[str, Any],
                  overall_reaction_analysis: Dict,
                  overall_reaction_phase: str,
                  **kwargs):
@@ -66,8 +68,6 @@ class ChemicalPotential:
             component dictionary {key: value}, such as {CO2: 0, H2: 1, CO: 2, H2O: 3, CH3OH: 4}
         comp_list : list
             component list [{key: value}, {key: value}, ...], such as [{CO2: -1.0, H2: -3.0, CH3OH: 1.0, H2O: 1.0}, ...]
-        stoichiometric_coeff : np.ndarray
-            stoichiometric coefficient matrix, such as [[-1.0, -3.0, 1.0, 1.0], ...]
         reaction_analysis : dict
             reaction analysis result
         overall_reaction_analysis : dict
@@ -83,12 +83,14 @@ class ChemicalPotential:
         self.equationsource = equationsource
         # set component dictionary
         self.component_dict = component_dict
+        # reaction list
+        self.reaction_list = reaction_list
         # set component list
         self.comp_list = comp_list
-        # set stoichiometric coefficient
-        self.stoichiometric_coeff = stoichiometric_coeff
         # set reaction analysis
         self.reaction_analysis = reaction_analysis
+        # phase stream
+        self.phase_stream = phase_stream
         # set overall reaction analysis
         self.overall_reaction_analysis = overall_reaction_analysis
         # set overall reaction phase
@@ -301,3 +303,16 @@ class ChemicalPotential:
         except Exception as e:
             raise Exception(
                 f"Error in calculating the fugacity coefficient for the liquid mixture: {str(e)}") from e
+
+    def cal_actual_gibbs_energy_of_reaction(
+        self,
+        phase_contents: Dict[str, Any],
+        phase_stream: Dict[str, Any],
+        temperature: float,
+        pressure: float,
+        gas_mixture: str = 'ideal',
+        solution: str = 'ideal',
+    ):
+        pass
+
+    def __cal_
