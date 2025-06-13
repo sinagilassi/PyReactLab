@@ -352,8 +352,10 @@ class ChemReactUtils:
         except Exception as e:
             raise Exception(f"Error analyzing overall reactions: {e}")
 
-    def analyze_overall_reactions_v2(self,
-                                     reactions: Dict[str, Any]) -> Dict[str, List[str]]:
+    def analyze_overall_reactions_v2(
+        self,
+        reactions: Dict[str, Any]
+    ) -> Dict[str, List[str]]:
         """
         Analyze a list of chemical reactions and classify species as consumed, produced, or intermediate (version 2).
 

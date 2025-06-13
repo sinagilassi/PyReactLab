@@ -464,6 +464,7 @@ class ReactionAnalyzer:
             EnFo_unit = EnFo_src['unit']
             # to [J/mol]
             EnFo = EnFo_val*1e3
+            EnFo_ = pycuc.to(EnFo_val, f"{EnFo_unit} => J/mol")
 
             # NOTE: Gibbs free energy of formation at 298.15 K [kJ/mol]
             GiEnFo_src = self.datasource_extractor(
