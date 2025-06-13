@@ -83,3 +83,9 @@ GIBBS_FREE_ENERGY_OF_REACTION_T_SYMBOL = 'GiEn_rxn_T'
 # enthalpy of reaction at T
 ENTHALPY_OF_REACTION_T = 'enthalpy_of_reaction_T'
 ENTHALPY_OF_REACTION_T_SYMBOL = 'En_rxn_T'
+# gibbs energy of formation at T
+GIBBS_FREE_ENERGY_OF_FORMATION_T = 'gibbs_free_energy_of_formation_T'
+GIBBS_FREE_ENERGY_OF_FORMATION_T_SYMBOL = 'GiEnFo_T'
+# enthalpy of formation at T
+ENTHALPY_OF_FORMATION_T = 'enthalpy_of_formation_T'
+ENTHALPY_OF_FORMATION_T_SYMBOL = 'EnFo_T'

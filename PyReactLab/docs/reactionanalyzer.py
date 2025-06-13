@@ -16,6 +16,8 @@ from ..configs import (
     ENTHALPY_OF_FORMATION_STD, ENTHALPY_OF_FORMATION_STD_SYMBOL,
     GIBBS_FREE_ENERGY_OF_REACTION_T, ENTHALPY_OF_REACTION_T,
     GIBBS_FREE_ENERGY_OF_REACTION_T_SYMBOL, ENTHALPY_OF_REACTION_T_SYMBOL,
+    GIBBS_FREE_ENERGY_OF_FORMATION_T, ENTHALPY_OF_FORMATION_T,
+    GIBBS_FREE_ENERGY_OF_FORMATION_T_SYMBOL, ENTHALPY_OF_FORMATION_T_SYMBOL
 )
 
 
@@ -207,7 +209,9 @@ class ReactionAnalyzer:
             # ! gibbs energy of formation
             _dGf_IG = self.datasource_extractor(
                 # type: ignore
-                datasource, [molecule_, molecule_state_], 'GiEnFo'
+                datasource,
+                [molecule_, molecule_state_],
+                'GiEnFo'
             )
             # check
             if _dGf_IG is None or _dGf_IG == 'None':
@@ -223,7 +227,9 @@ class ReactionAnalyzer:
             # ! enthalpy of formation
             _dHf_IG = self.datasource_extractor(
                 # type: ignore
-                datasource, [molecule_, molecule_state_], 'EnFo'
+                datasource,
+                [molecule_, molecule_state_],
+                'EnFo'
             )
 
             # check
@@ -246,7 +252,9 @@ class ReactionAnalyzer:
             # ! gibbs energy of formation
             _dGf_IG = self.datasource_extractor(
                 # type: ignore
-                datasource, [molecule_, molecule_state_], 'GiEnFo'
+                datasource,
+                [molecule_, molecule_state_],
+                'GiEnFo'
             )
 
             # check
@@ -263,7 +271,9 @@ class ReactionAnalyzer:
             # ! enthalpy of formation
             _dHf_IG = self.datasource_extractor(
                 # type: ignore
-                datasource, [molecule_, molecule_state_], 'EnFo'
+                datasource,
+                [molecule_, molecule_state_],
+                'EnFo'
             )
 
             # check
@@ -463,8 +473,8 @@ class ReactionAnalyzer:
             # TODO: convert to [J/mol]
             EnFo_unit = EnFo_src['unit']
             # to [J/mol]
-            EnFo = EnFo_val*1e3
-            EnFo_ = pycuc.to(EnFo_val, f"{EnFo_unit} => J/mol")
+            # EnFo = EnFo_val*1e3
+            EnFo = pycuc.to(EnFo_val, f"{EnFo_unit} => J/mol")
 
             # NOTE: Gibbs free energy of formation at 298.15 K [kJ/mol]
             GiEnFo_src = self.datasource_extractor(
@@ -483,7 +493,8 @@ class ReactionAnalyzer:
             GiEnFo_val = float(GiEnFo_src['value'])
             GiEnFo_unit = GiEnFo_src['unit']
             # to [J/mol]
-            GiEnFo = GiEnFo_val*1e3
+            # GiEnFo = GiEnFo_val*1e3
+            GiEnFo = pycuc.to(GiEnFo_val, f"{GiEnFo_unit} => J/mol")
 
             # NOTE: set equation
             # ! extract Cp equation
@@ -506,21 +517,35 @@ class ReactionAnalyzer:
                 )
 
             # NOTE: integral [Cp/RT]
+
+            # scipy integrate method
+            def integrand_0(T):
+                res_ = _eq.cal(T=T)
+                cal_ = res_.get('value', None)
+                unit_ = res_.get('unit', None)
+                if cal_ is None:
+                    raise ValueError(
+                        f"Failed to calculate Cp for {component_names} at T={T} K.")
+
+                if not isinstance(cal_, str) and not isinstance(cal_, float):
+                    raise ValueError(
+                        f"Invalid Cp value for {component_names} at T={T} K: {cal_}")
+
+                if unit_ is None:
+                    raise ValueError(
+                        f"Failed to get unit for Cp of {component_names} at T={T} K.")
+
+                # TODO: convert to [J/mol.K]
+                cal_ = pycuc.to(float(cal_), f"{unit_} => J/mol.K")
+                res = cal_/(T*R)
+                return res
+
             # method 1
             # _eq_Cp_integral_Cp__RT = _eq.cal_custom_integral(
             #     'Cp/RT',
             #     T1=T_ref,
             #     T2=T
             # )
-
-            # method 2
-            def integrand_0(T):
-                cal_ = _eq.cal(T=T).get('value', None)
-                if cal_ is None:
-                    raise ValueError(
-                        f"Failed to calculate Cp for {component_names} at T={T} K.")
-                res = cal_/(T*R)
-                return res
 
             # cal
             _eq_Cp_integral_Cp__RT, _ = integrate.quad(
@@ -530,6 +555,28 @@ class ReactionAnalyzer:
             )
 
             # NOTE: Cp integral
+
+            # scipy integrate method
+            def integrand_1(T):
+                res_ = _eq.cal(T=T)
+                cal_ = res_.get('value', None)
+                unit_ = res_.get('unit', None)
+                if cal_ is None:
+                    raise ValueError(
+                        f"Failed to calculate Cp for {component_names} at T={T} K.")
+
+                if not isinstance(cal_, str) and not isinstance(cal_, float):
+                    raise ValueError(
+                        f"Invalid Cp value for {component_names} at T={T} K: {cal_}")
+
+                if unit_ is None:
+                    raise ValueError(
+                        f"Failed to get unit for Cp of {component_names} at T={T} K.")
+
+                # TODO: to [J/mol.K]
+                cal_ = pycuc.to(float(cal_), f"{unit_} => J/mol.K")
+                return cal_
+
             # method 1
             # _eq_Cp_integral = _eq.cal_integral(
             #     T1=T_ref,
@@ -537,15 +584,6 @@ class ReactionAnalyzer:
             # )
 
             # method 2
-            def integrand_1(T):
-                cal_ = _eq.cal(T=T).get('value', None)
-                if cal_ is None:
-                    raise ValueError(
-                        f"Failed to calculate Cp for {component_names} at T={T} K.")
-                # to [J/mol.K]
-                return cal_
-
-            # cal
             _eq_Cp_integral, _ = integrate.quad(
                 integrand_1,
                 T_ref,
@@ -575,23 +613,29 @@ class ReactionAnalyzer:
             GiEn_T = float(E*R*T)
 
             return {
-                'EnFo': {
+                ENTHALPY_OF_FORMATION_STD: {
                     'value': EnFo,
-                    'unit_0': EnFo_unit,
-                    'unit': 'J/mol'
+                    'unit': 'J/mol',
+                    'symbol': ENTHALPY_OF_FORMATION_STD_SYMBOL,
+                    'name': ENTHALPY_OF_FORMATION_STD
                 },
-                'GiEnFo': {
+                GIBBS_FREE_ENERGY_OF_FORMATION_STD: {
                     'value': GiEnFo,
-                    'unit_0': GiEnFo_unit,
-                    'unit': 'J/mol'
+                    'unit': 'J/mol',
+                    'symbol': GIBBS_FREE_ENERGY_OF_FORMATION_STD_SYMBOL,
+                    'name': GIBBS_FREE_ENERGY_OF_FORMATION_STD
                 },
-                'En_T': {
+                ENTHALPY_OF_FORMATION_T: {
                     'value': En_T,
-                    'unit': 'J/mol'
+                    'unit': 'J/mol',
+                    'symbol': ENTHALPY_OF_FORMATION_T_SYMBOL,
+                    'name': ENTHALPY_OF_FORMATION_T
                 },
-                'GiEn_T': {
+                GIBBS_FREE_ENERGY_OF_FORMATION_T: {
                     'value': GiEn_T,
-                    'unit': 'J/mol'
+                    'unit': 'J/mol',
+                    'symbol': GIBBS_FREE_ENERGY_OF_FORMATION_T_SYMBOL,
+                    'name': GIBBS_FREE_ENERGY_OF_FORMATION_T
                 },
             }
         except Exception as e:
@@ -716,10 +760,10 @@ class ReactionAnalyzer:
             src_ = thermodb['parms']['reactants'][reactant_name]
 
             # dGrxn at T
-            _val_dGrxn_T -= src_['GiEn_T']['value'] * \
+            _val_dGrxn_T -= src_[GIBBS_FREE_ENERGY_OF_FORMATION_T]['value'] * \
                 reactant['coefficient']
             # dHrxn at T
-            _val_dHrxn_T -= src_['En_T']['value'] * \
+            _val_dHrxn_T -= src_[ENTHALPY_OF_FORMATION_T]['value'] * \
                 reactant['coefficient']
 
         # NOTE: looping through products
@@ -730,11 +774,11 @@ class ReactionAnalyzer:
             src_ = thermodb['parms']['products'][product_name]
 
             # dGrxn at T
-            _val_dGrxn_T += src_['GiEn_T']['value'] * \
+            _val_dGrxn_T += src_[GIBBS_FREE_ENERGY_OF_FORMATION_T]['value'] * \
                 product['coefficient']
 
             # dHrxn at T
-            _val_dHrxn_T += src_['En_T']['value'] * \
+            _val_dHrxn_T += src_[ENTHALPY_OF_FORMATION_T]['value'] * \
                 product['coefficient']
 
         # NOTE: save
