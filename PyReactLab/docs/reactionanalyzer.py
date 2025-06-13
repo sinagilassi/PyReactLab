@@ -517,9 +517,13 @@ class ReactionAnalyzer:
                 )
 
             # NOTE: integral [Cp/RT]
-
+            # init unit
+            unit_ = None
             # scipy integrate method
+
             def integrand_0(T):
+                # modify the nonlocal variable
+                nonlocal unit_
                 res_ = _eq.cal(T=T)
                 cal_ = res_.get('value', None)
                 unit_ = res_.get('unit', None)
@@ -535,24 +539,35 @@ class ReactionAnalyzer:
                     raise ValueError(
                         f"Failed to get unit for Cp of {component_names} at T={T} K.")
 
-                # TODO: convert to [J/mol.K]
-                cal_ = pycuc.to(float(cal_), f"{unit_} => J/mol.K")
                 res = cal_/(T*R)
                 return res
 
-            # method 1
-            # _eq_Cp_integral_Cp__RT = _eq.cal_custom_integral(
-            #     'Cp/RT',
-            #     T1=T_ref,
-            #     T2=T
-            # )
+            # ! check custom
+            custom_integral = _eq.custom_integral
+            if custom_integral.get('Cp/RT', None) is not None:
+                # calc
+                # method 1
+                _eq_Cp_integral_Cp__RT = _eq.cal_custom_integral(
+                    'Cp/RT',
+                    T1=T_ref,
+                    T2=T
+                )
+            else:
+                # calc
+                # method 2
+                _eq_Cp_integral_Cp__RT, _ = integrate.quad(
+                    integrand_0,
+                    T_ref,
+                    T
+                )
+                # check
+                if unit_ is None:
+                    raise ValueError(
+                        f"equation {component_names} does not have a unit for Cp integral.")
 
-            # cal
-            _eq_Cp_integral_Cp__RT, _ = integrate.quad(
-                integrand_0,
-                T_ref,
-                T
-            )
+                # TODO: convert to [J/mol.K]
+                _eq_Cp_integral_Cp__RT = pycuc.to(_eq_Cp_integral_Cp__RT,
+                                                  f"{unit_} => J/mol.K")
 
             # NOTE: Cp integral
 
