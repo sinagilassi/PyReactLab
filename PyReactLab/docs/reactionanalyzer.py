@@ -448,7 +448,9 @@ class ReactionAnalyzer:
             # NOTE: enthalpy of formation at 298.15 K [kJ/mol]
             EnFo_src = self.datasource_extractor(
                 # type: ignore
-                datasource, component_names, 'EnFo'
+                datasource,
+                component_names,
+                'EnFo'
             )
 
             # check
@@ -458,6 +460,7 @@ class ReactionAnalyzer:
 
             # set values
             EnFo_val = float(EnFo_src['value'])
+            # TODO: convert to [J/mol]
             EnFo_unit = EnFo_src['unit']
             # to [J/mol]
             EnFo = EnFo_val*1e3
@@ -465,7 +468,9 @@ class ReactionAnalyzer:
             # NOTE: Gibbs free energy of formation at 298.15 K [kJ/mol]
             GiEnFo_src = self.datasource_extractor(
                 # type: ignore
-                datasource, component_names, 'GiEnFo'
+                datasource,
+                component_names,
+                'GiEnFo'
             )
 
             # check

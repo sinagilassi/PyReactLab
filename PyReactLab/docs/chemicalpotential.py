@@ -314,5 +314,3 @@ class ChemicalPotential:
         solution: str = 'ideal',
     ):
         pass
-
-    def __cal_

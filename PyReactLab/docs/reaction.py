@@ -313,6 +313,8 @@ class Reaction():
                     "symbol": "T",
                     "unit": "K",
                 },
+                'reactants': res['parms']['reactants'],
+                'products': res['parms']['products'],
                 GIBBS_FREE_ENERGY_OF_REACTION_T: res[GIBBS_FREE_ENERGY_OF_REACTION_T],
                 ENTHALPY_OF_REACTION_T: res[ENTHALPY_OF_REACTION_T],
             }
