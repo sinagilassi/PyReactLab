@@ -127,7 +127,12 @@ print(f'K_eq_300: {K_eq_300}')
 res_ = R1.cal_reaction_energy([300.0, "K"])
 print(f'En_rxn: {res_}')
 
-# NOTE:
+# NOTE: formatting energies
+res_ = reaction_system.component_formation_energies(
+    component_name='CO2-g',
+    temperature=[300.0, "K"],
+)
+print(f'formation energies: {res_}')
 
 # SECTION: EQUILIBRIUM CALCULATION
 

@@ -313,8 +313,6 @@ class Reaction():
                     "symbol": "T",
                     "unit": "K",
                 },
-                'reactants': res['parms']['reactants'],
-                'products': res['parms']['products'],
                 GIBBS_FREE_ENERGY_OF_REACTION_T: res[GIBBS_FREE_ENERGY_OF_REACTION_T],
                 ENTHALPY_OF_REACTION_T: res[ENTHALPY_OF_REACTION_T],
             }
@@ -322,53 +320,3 @@ class Reaction():
         except Exception as e:
             raise Exception(
                 f"Error in ReactionSystem.Keq_T(): {str(e)}") from e
-
-    def calc_component_formation_energies(
-        self,
-        component_name: str,
-        temperature: List[float | str]
-    ):
-        '''
-        Calculate enthalpy and gibbs free energy of formation for a component at a given temperature.
-
-        Parameters
-        ----------
-        component_name : str
-            Name of the component such as 'H2O-l', 'CO2-g', etc.
-        temperature : list[float, str]
-            Temperature in any unit, e.g. [300.0, "K"], It is automatically converted to Kelvin.
-
-
-        '''
-        try:
-            # NOTE: check if T
-            # check if T is a list
-            if not isinstance(temperature, list):
-                raise ValueError("Temperature must be a list.")
-
-            # check if T is a number
-            if not isinstance(temperature[0], (int, float)):
-                raise ValueError("Temperature must be a number.")
-
-            # check if T is a string
-            if not isinstance(temperature[1], str):
-                raise ValueError("Temperature unit must be a string.")
-
-            # NOTE: convert temperature to Kelvin
-            # set unit
-            unit_set = f"{temperature[1]} => K"
-            T = pycuc.to(temperature[0], unit_set)
-
-            # SECTION: calculate component formation energies
-            res = self.ReactionAnalyzer_.component_formation_energies(
-                self.datasource,
-                self.equationsource,
-                component_name,
-                T,
-                self.reaction_analysis_result,
-            )
-
-            return res
-        except Exception as e:
-            raise Exception(
-                f"Error in ReactionSystem.calc_component_formation_energies(): {str(e)}") from e

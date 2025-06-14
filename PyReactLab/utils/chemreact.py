@@ -490,22 +490,37 @@ class ChemReactUtils:
             component list
         comp_coeff: list
             component coefficient
+        component_state_list: list
+            component state list
         '''
         try:
             # NOTE: component list
             component_list = []
+            component_state_list = []
 
             # SECTION: Iterate over reactions and extract reactants and products
             for item in reaction_res:
                 # reactants
                 for reactant in reaction_res[item]['reactants']:
                     component_list.append(reactant['molecule_state'])
+                    # add molecule and molecule state
+                    component_state_list.append(
+                        (reactant['molecule'],
+                         reactant['state'],
+                         reactant['molecule_state']))
                 # products
                 for product in reaction_res[item]['products']:
                     component_list.append(product['molecule_state'])
+                    # add molecule and molecule state
+                    component_state_list.append(
+                        (product['molecule'],
+                         product['state'],
+                         product['molecule_state']))
 
             # remove duplicate
             component_list = list(set(component_list))
+            # remove duplicates in component_state_list
+            component_state_list = list(set(component_state_list))
 
             # component id: key, value
             component_dict = {}
@@ -537,7 +552,13 @@ class ChemReactUtils:
                           for j in range(len(reaction_res))]
 
             # res
-            return component_list, component_dict, comp_list, comp_coeff
+            return (
+                component_list,
+                component_dict,
+                comp_list,
+                comp_coeff,
+                component_state_list
+            )
         except Exception as e:
             raise Exception(f"Error defining component ID: {e}")
 

@@ -8,6 +8,7 @@ from ..configs import (
     PRESSURE_REF_Pa, TEMPERATURE_REF_K, EOS_MODELS, ACTIVITY_MODELS
 )
 from .reaction import Reaction
+from .reactionanalyzer import ReactionAnalyzer
 
 
 class ChemicalPotential:
@@ -104,6 +105,9 @@ class ChemicalPotential:
 
         # NOTE: kwargs
         self.threshold = kwargs.get('threshold', 1e-8)
+
+        # SECTION: init class
+        self.ReactionAnalyzer_ = ReactionAnalyzer()
 
     @property
     def eos(self):
@@ -303,6 +307,62 @@ class ChemicalPotential:
         except Exception as e:
             raise Exception(
                 f"Error in calculating the fugacity coefficient for the liquid mixture: {str(e)}") from e
+
+    def cal_chemical_potential_term(
+        self,
+        component_state_list: List[tuple],
+        temperature: float
+    ) -> Dict[str, Any]:
+        '''
+        Calculate the chemical potential of a reaction system at a given temperature.
+
+        Parameters
+        ----------
+        component_state_list : list of tuples
+            List of component states, each tuple should contain (molecule, state, molecule_state).
+            Example: [('CO2', 'g', 'CO2-g'), ('H2', 'g', 'H2-g'), ...]
+        temperature : float
+            Temperature (K) at which to calculate the chemical potential.
+        '''
+        try:
+            # NOTE:
+            # SECTION: calculate the chemical potential at the given temperature
+            chemical_potential_T_comp = {}
+
+            # loop through each component
+            for component in component_state_list:
+                # NOTE: check if component is valid
+                if len(component) != 3:
+                    raise ValueError(
+                        f"Invalid component state: {component}. It should be a tuple of (molecule, state, molecule_state).")
+
+                # get component name
+                component_name = [component[0], component[2]]
+                key_ = f"{component[2]}"
+
+                # calculate chemical potential at the given temperature
+                res_ = self.ReactionAnalyzer_.component_energy_at_temperature(
+                    datasource=self.datasource,
+                    equationsource=self.equationsource,
+                    component_names=component_name,
+                    temperature=temperature,
+                    res_format='symbolic',
+                )
+
+                # save
+                chemical_potential_T_comp[key_] = res_
+
+            # NOTE: return chemical potential
+            return chemical_potential_T_comp
+        except Exception as e:
+            raise Exception(
+                f"Error in calculating the chemical potential: {str(e)}") from e
+
+    def gas_mixture_term(self):
+        pass
+
+    def solution_term(self):
+        pass
 
     def cal_actual_gibbs_energy_of_reaction(
         self,

@@ -358,6 +358,9 @@ class ReactionAnalyzer:
         equationsource: Dict[str, Any],
         component_names: List[str],
         temperature: float,
+        res_format: Literal[
+            'symbolic', 'names'
+        ] = 'names',
         **kwargs
     ):
         """
@@ -373,6 +376,8 @@ class ReactionAnalyzer:
             The names of the components for which to calculate Gibbs energy and enthalpy.
         temperature : float
             The temperature at which to calculate Gibbs energy.
+        res_format : str, optional
+            The format of the result, by default 'names'.
         kwargs : dict
             Additional keyword arguments.
             - decimal_accuracy : int
@@ -517,11 +522,15 @@ class ReactionAnalyzer:
                 )
 
             # NOTE: integral [Cp/RT]
+            # unit: [dimensionless]
             # init unit
             unit_ = None
             # scipy integrate method
 
             def integrand_0(T):
+                '''
+                Dimensionless integrand for Cp/RT calculation.
+                '''
                 # modify the nonlocal variable
                 nonlocal unit_
                 res_ = _eq.cal(T=T)
@@ -565,14 +574,26 @@ class ReactionAnalyzer:
                     raise ValueError(
                         f"equation {component_names} does not have a unit for Cp integral.")
 
-                # TODO: convert to [J/mol.K]
+                # TODO: FINALLY convert Cp equation to [J/mol.K]
                 _eq_Cp_integral_Cp__RT = pycuc.to(_eq_Cp_integral_Cp__RT,
                                                   f"{unit_} => J/mol.K")
 
+            # check
+            if not _eq_Cp_integral_Cp__RT:
+                raise ValueError(
+                    f"Failed to calculate Cp integral for {component_names}.")
+
             # NOTE: Cp integral
+            # unit: [J/mol]
+            # init unit_
+            unit_ = None
 
             # scipy integrate method
             def integrand_1(T):
+                '''
+                Integral of Cp equation, unit: [J/mol]
+                '''
+                nonlocal unit_
                 res_ = _eq.cal(T=T)
                 cal_ = res_.get('value', None)
                 unit_ = res_.get('unit', None)
@@ -588,22 +609,36 @@ class ReactionAnalyzer:
                     raise ValueError(
                         f"Failed to get unit for Cp of {component_names} at T={T} K.")
 
-                # TODO: to [J/mol.K]
-                cal_ = pycuc.to(float(cal_), f"{unit_} => J/mol.K")
                 return cal_
 
-            # method 1
-            # _eq_Cp_integral = _eq.cal_integral(
-            #     T1=T_ref,
-            #     T2=T
-            # )
+            # ! check integral
+            function_integral = _eq.body_integral
 
-            # method 2
-            _eq_Cp_integral, _ = integrate.quad(
-                integrand_1,
-                T_ref,
-                T
-            )
+            # check
+            if function_integral:
+                # calc
+                # method 1
+                _eq_Cp_integral = _eq.cal_integral(
+                    T1=T_ref,
+                    T2=T
+                )
+            else:
+                # calc
+                # method 2
+                _eq_Cp_integral, _ = integrate.quad(
+                    integrand_1,
+                    T_ref,
+                    T
+                )
+
+                # check
+                if unit_ is None:
+                    raise ValueError(
+                        f"equation {component_names} does not have a unit for Cp integral.")
+
+                # TODO: FINALLY convert Cp equation to [J/mol.K] (after integration means the unit is [J/mol])
+                _eq_Cp_integral = pycuc.to(
+                    _eq_Cp_integral, f"{unit_} => J/mol.K")
 
             # check
             if not _eq_Cp_integral:
@@ -627,26 +662,42 @@ class ReactionAnalyzer:
             # at T [J/mol]
             GiEn_T = float(E*R*T)
 
+            # SECTION: set results
+            # check format
+            if res_format == "names":
+                ENTHALPY_OF_FORMATION_STD_RES = ENTHALPY_OF_FORMATION_STD
+                GIBBS_FREE_ENERGY_OF_FORMATION_STD_RES = GIBBS_FREE_ENERGY_OF_FORMATION_STD
+                ENTHALPY_OF_FORMATION_T_RES = ENTHALPY_OF_FORMATION_T
+                GIBBS_FREE_ENERGY_OF_FORMATION_T_RES = GIBBS_FREE_ENERGY_OF_FORMATION_T
+            elif res_format == "symbolic":
+                ENTHALPY_OF_FORMATION_STD_RES = ENTHALPY_OF_FORMATION_STD_SYMBOL
+                GIBBS_FREE_ENERGY_OF_FORMATION_STD_RES = GIBBS_FREE_ENERGY_OF_FORMATION_STD_SYMBOL
+                ENTHALPY_OF_FORMATION_T_RES = ENTHALPY_OF_FORMATION_T_SYMBOL
+                GIBBS_FREE_ENERGY_OF_FORMATION_T_RES = GIBBS_FREE_ENERGY_OF_FORMATION_T_SYMBOL
+            else:
+                raise ValueError(
+                    f"Invalid result format: {res_format}. Use 'names' or 'symbolic'.")
+
             return {
-                ENTHALPY_OF_FORMATION_STD: {
+                ENTHALPY_OF_FORMATION_STD_RES: {
                     'value': EnFo,
                     'unit': 'J/mol',
                     'symbol': ENTHALPY_OF_FORMATION_STD_SYMBOL,
                     'name': ENTHALPY_OF_FORMATION_STD
                 },
-                GIBBS_FREE_ENERGY_OF_FORMATION_STD: {
+                GIBBS_FREE_ENERGY_OF_FORMATION_STD_RES: {
                     'value': GiEnFo,
                     'unit': 'J/mol',
                     'symbol': GIBBS_FREE_ENERGY_OF_FORMATION_STD_SYMBOL,
                     'name': GIBBS_FREE_ENERGY_OF_FORMATION_STD
                 },
-                ENTHALPY_OF_FORMATION_T: {
+                ENTHALPY_OF_FORMATION_T_RES: {
                     'value': En_T,
                     'unit': 'J/mol',
                     'symbol': ENTHALPY_OF_FORMATION_T_SYMBOL,
                     'name': ENTHALPY_OF_FORMATION_T
                 },
-                GIBBS_FREE_ENERGY_OF_FORMATION_T: {
+                GIBBS_FREE_ENERGY_OF_FORMATION_T_RES: {
                     'value': GiEn_T,
                     'unit': 'J/mol',
                     'symbol': GIBBS_FREE_ENERGY_OF_FORMATION_T_SYMBOL,

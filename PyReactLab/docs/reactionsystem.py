@@ -50,6 +50,9 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
         ReferenceManager.__init__(self)
         ThermoLinkDB.__init__(self, model_source)
 
+        # SECTION: init class
+        self.ReactionAnalyzer_ = ReactionAnalyzer()
+
         # SECTION: load reference
         # reference plugin (default app params)
         self._references = self.load_reference()
@@ -160,7 +163,9 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             # ? component_dict: dict of component: id
             # ? comp_list: list of dict of component stoichiometry
             # ? comp_coeff: list of list of component stoichiometry
-            component_list, component_dict, comp_list, comp_coeff = res_1
+            # ? component_state_list: list of component name and state
+            (component_list, component_dict, comp_list,
+             comp_coeff, component_state_list) = res_1
 
             # set stoichiometry transpose
             comp_coeff_t = np.array(comp_coeff).T
@@ -230,12 +235,101 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             self.coeff_list_dict = comp_list
             self.coeff_list_list = comp_coeff
             self.coeff_T_list_list = comp_coeff_t  # transpose
+            self.component_state_list = component_state_list  # component state list
             self.energy_analysis = energy_analysis  # energy analysis result
             self.phase_contents = phase_contents  # phase contents
 
         except Exception as e:
             raise Exception(
                 f"Error in ReactionSystem.go(): {str(e)}") from e
+
+    def component_formation_energies(
+        self,
+        component_name: str,
+        temperature: List[float | str],
+        res_format: Literal[
+            'symbolic', 'names'
+        ] = 'names',
+        message: Optional[str] = None
+    ):
+        '''
+        Calculate enthalpy and gibbs free energy of formation for a component at a given temperature.
+
+        Parameters
+        ----------
+        component_name : str
+            Name of the component such as 'H2O-l', 'CO2-g', etc.
+        temperature : list[float, str]
+            Temperature in any unit, e.g. [300.0, "K"], It is automatically converted to Kelvin.
+        res_format : str, optional
+            Format of the result, by default 'names'.
+        message : str, optional
+            Optional message to display during the calculation, by default None.
+
+
+        '''
+        try:
+            # NOTE: check if T
+            # check if T is a list
+            if not isinstance(temperature, list):
+                raise ValueError("Temperature must be a list.")
+
+            # check if T is a number
+            if not isinstance(temperature[0], (int, float)):
+                raise ValueError("Temperature must be a number.")
+
+            # check if T is a string
+            if not isinstance(temperature[1], str):
+                raise ValueError("Temperature unit must be a string.")
+
+            # NOTE: convert temperature to Kelvin
+            # get
+            T_value = temperature[0]
+            T_unit = temperature[1]
+            # set unit
+            unit_set = f"{T_unit} => K"
+            T = pycuc.to(T_value, unit_set)
+
+            # SECTION: check if component name is valid
+            # init
+            component_name_ = []
+            component_name = component_name.strip()
+
+            # loop through component state list
+            for item in self.component_state_list:
+                # check if component name is valid
+                if item[2] == component_name.strip():
+                    # set
+                    component_name_.append(item[0])
+                    component_name_.append(item[2])  # state
+                    break
+
+            # ! check if component name is valid
+            if len(component_name_) == 0:
+                raise ValueError(
+                    f"Invalid component name: {component_name}. Please check the component name and try again.")
+
+            # SECTION: calculate component formation energies
+            res_ = self.ReactionAnalyzer_.component_energy_at_temperature(
+                datasource=self.datasource,
+                equationsource=self.equationsource,
+                component_names=component_name_,
+                temperature=T,
+                res_format=res_format,
+            )
+
+            # NOTE: add message if provided
+            if message is None:
+                message = f"Formation energies of {component_name_} at {T_value} {T_unit}"
+
+            # set message
+            res_['message'] = {'value': message}
+
+            # return res
+            return res_
+        except Exception as e:
+            raise Exception(
+                f"Error in ReactionSystem.calc_component_formation_energies(): {str(e)}") from e
 
     def reaction_equilibrium_constant(
         self,
@@ -1004,6 +1098,13 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
 
             # solution
             ChemicalPotential_.solution = solution
+
+            # SECTION: calculate the chemical potential at the given temperature
+            chemical_potential_T_comp = ChemicalPotential_.\
+                cal_chemical_potential_term(
+                    component_state_list=self.component_state_list,
+                    temperature=temperature_K,
+                )
 
             # SECTION: calculate the actual Gibbs free energy of reaction
 
