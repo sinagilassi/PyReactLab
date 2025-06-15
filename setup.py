@@ -8,7 +8,7 @@ with codecs.open(os.path.join(here, "README.md"), encoding="utf-8") as fh:
     long_description = "\n" + fh.read()
 
 APP_NAME = 'PyReactLab'
-VERSION = '0.2.2'
+VERSION = '0.3.0'
 AUTHOR = 'Sina Gilassi'
 EMAIL = "<sina.gilassi@gmail.com>"
 DESCRIPTION = 'PyReactLab is an open-source Python package designed to analyze chemical reactions and theoretically assess their thermodynamic feasibility.'
