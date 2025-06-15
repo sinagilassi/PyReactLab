@@ -17,7 +17,9 @@ from ..configs import (
     GIBBS_FREE_ENERGY_OF_REACTION_T, ENTHALPY_OF_REACTION_T,
     GIBBS_FREE_ENERGY_OF_REACTION_T_SYMBOL, ENTHALPY_OF_REACTION_T_SYMBOL,
     GIBBS_FREE_ENERGY_OF_FORMATION_T, ENTHALPY_OF_FORMATION_T,
-    GIBBS_FREE_ENERGY_OF_FORMATION_T_SYMBOL, ENTHALPY_OF_FORMATION_T_SYMBOL
+    GIBBS_FREE_ENERGY_OF_FORMATION_T_SYMBOL, ENTHALPY_OF_FORMATION_T_SYMBOL,
+    CHEMICAL_POTENTIAL_MIXTURE_T_P, CHEMICAL_POTENTIAL_MIXTURE_T_P_SYMBOL,
+    ACTUAL_GIBBS_FREE_ENERGY_OF_REACTION, ACTUAL_GIBBS_FREE_ENERGY_OF_REACTION_SYMBOL
 )
 from ..utils import (
     Temperature,
@@ -1028,14 +1030,6 @@ class ReactionAnalyzer:
         if total_mole_fraction == 0:
             raise ValueError("Total mole fraction is zero, cannot normalize.")
 
-        # check any zero mole fraction, set minimum value to 1e-5
-        for key, value in mole_fraction.items():
-            if value < 1e-5:
-                mole_fraction[key] = 1e-5
-
-        # recalculate total mole fraction
-        total_mole_fraction = sum(mole_fraction.values())
-
         # Normalize mole fraction
         normalized_mole_fraction = {key: value / total_mole_fraction for key,
                                     value in mole_fraction.items()}
@@ -1071,15 +1065,7 @@ class ReactionAnalyzer:
         mole_fraction = {key: value / total_mole for key,
                          value in initial_moles.items()}
 
-        # check any zero mole fraction, set minimum value to 1e-5
-        for key, value in mole_fraction.items():
-            if value < 1e-5:
-                mole_fraction[key] = 1e-5
-
-        # Calculate total mole fraction (verification)
-        total_mole_fraction = sum(mole_fraction.values())
-
-        return mole_fraction, total_mole_fraction
+        return mole_fraction, total_mole
 
     @staticmethod
     def set_initial_mole(
@@ -1101,7 +1087,7 @@ class ReactionAnalyzer:
         try:
             # set minimum for zero mole
             initial_mole = {
-                key: value if value >= 1e-5 else minimum_mole for key,
+                key: value if value >= 0 else minimum_mole for key,
                 value in initial_mole.items()
             }
 
@@ -1129,12 +1115,6 @@ class ReactionAnalyzer:
         dict
             Dictionary with species as keys and initial moles as values.
         """
-        # set minimum for zero mole fraction
-        initial_mole_fraction = {
-            key: value if value >= 1e-5 else 1e-5 for key,
-            value in initial_mole_fraction.items()
-        }
-
         # Calculate total mole
         total_mole = sum(initial_mole_fraction.values()) * mole_basis
 
@@ -1248,7 +1228,8 @@ class ReactionAnalyzer:
                 # NOTE: loop through the components in the phase
                 for component in components:
                     # check if component exists in initial_mole and initial_mole_fraction
-                    if component not in initial_mole or component not in initial_mole_fraction:
+                    if (component not in initial_mole or
+                            component not in initial_mole_fraction):
                         raise ValueError(
                             f"Component {component} not found in initial moles or mole fractions.")
 
@@ -1429,7 +1410,13 @@ class ReactionAnalyzer:
                     f"Chemical potential for {molecule_state_} not found in the provided data.")
 
             # save
-            thermodb['parms']['reactants'][molecule_state_] = res__
+            thermodb['parms']['reactants'][molecule_state_] = {
+                CHEMICAL_POTENTIAL_MIXTURE_T_P: {
+                    'value': res__,
+                    'symbol': CHEMICAL_POTENTIAL_MIXTURE_T_P_SYMBOL,
+                    'unit': 'J/mol'
+                }
+            }
 
         # SECTION: product energy analysis
         # looping through products
@@ -1449,10 +1436,16 @@ class ReactionAnalyzer:
                     f"Chemical potential for {molecule_state_} not found in the provided data.")
 
             # save
-            thermodb['parms']['products'][molecule_state_] = res__
+            thermodb['parms']['products'][molecule_state_] = {
+                CHEMICAL_POTENTIAL_MIXTURE_T_P: {
+                    'value': res__,
+                    'symbol': CHEMICAL_POTENTIAL_MIXTURE_T_P_SYMBOL,
+                    'unit': 'J/mol'
+                }
+            }
 
         # SECTION: calculate actual Gibbs energy of reaction
-        # overall energy analysis
+        # overall energy analysis [J/mol]
         _val_dGrxn_T = 0
 
         # NOTE: looping through reactants
@@ -1463,7 +1456,7 @@ class ReactionAnalyzer:
             src_ = thermodb['parms']['reactants'][reactant_name]
 
             # dGrxn at T
-            _val_dGrxn_T -= src_[GIBBS_FREE_ENERGY_OF_FORMATION_T]['value'] * \
+            _val_dGrxn_T -= src_[CHEMICAL_POTENTIAL_MIXTURE_T_P]['value'] * \
                 reactant['coefficient']
 
         # NOTE: looping through products
@@ -1474,13 +1467,13 @@ class ReactionAnalyzer:
             src_ = thermodb['parms']['products'][product_name]
 
             # dGrxn at T
-            _val_dGrxn_T += src_[GIBBS_FREE_ENERGY_OF_FORMATION_T]['value'] * \
+            _val_dGrxn_T += src_[CHEMICAL_POTENTIAL_MIXTURE_T_P]['value'] * \
                 product['coefficient']
 
         # NOTE: save
-        thermodb[GIBBS_FREE_ENERGY_OF_REACTION_T] = {
+        thermodb[ACTUAL_GIBBS_FREE_ENERGY_OF_REACTION] = {
             'value': float(_val_dGrxn_T),
-            'symbol': GIBBS_FREE_ENERGY_OF_REACTION_T_SYMBOL,
+            'symbol': ACTUAL_GIBBS_FREE_ENERGY_OF_REACTION_SYMBOL,
             'unit': 'J/mol'
         }
 

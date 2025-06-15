@@ -149,8 +149,8 @@ mole = {
     'CO2-g': 1,
     'H2-g': 3,
     'CO-g': 1,
-    'H2O-g': 0.001,
-    'CH3OH-g': 0.001
+    'H2O-g': 0,
+    'CH3OH-g': 0
 }
 
 # NOTE: activity inputs

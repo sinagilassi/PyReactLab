@@ -256,9 +256,11 @@ class ReactionOptimizer:
             raise Exception(
                 f"Error in ReactionOptimizer.build_EoR(): {str(e)}") from e
 
-    def build_final_X(self,
-                      N0s_vector: np.ndarray,
-                      EoR_vector: np.ndarray):
+    def build_final_X(
+        self,
+        N0s_vector: np.ndarray,
+        EoR_vector: np.ndarray
+    ):
         '''
         build final X
 
@@ -268,6 +270,8 @@ class ReactionOptimizer:
             component_dict
         N0s_vector : numpy.ndarray
             N0s_vector
+        EoR_vector : numpy.ndarray
+            EoR_vector
 
         Returns
         -------
@@ -411,15 +415,17 @@ class ReactionOptimizer:
             raise Exception(
                 f"Error in objective function: {str(e)}") from e
 
-    def reaction_equilibrium_equation(self,
-                                      Xfs: Dict[str, float],
-                                      P: float,
-                                      T: float,
-                                      equilibrium_constants: Dict[str, Dict[str, Any]],
-                                      phase: Literal[
-                                          "liquid", "gas"
-                                      ] = "gas",
-                                      **kwargs):
+    def reaction_equilibrium_equation(
+        self,
+        Xfs: Dict[str, float],
+        P: float,
+        T: float,
+        equilibrium_constants: Dict[str, Dict[str, Any]],
+        phase: Literal[
+            "liquid", "gas"
+        ] = "gas",
+        **kwargs
+    ):
         """
         Generate reaction equilibrium equations for gas and liquid phases.
 
@@ -867,6 +873,7 @@ class ReactionOptimizer:
             N0s_vector, EoR_vector)
 
         # constraint
+        # ! set epsilon constraint
         cos = Xfs_vector[i] - 1e-5
 
         return cos
@@ -1134,30 +1141,36 @@ class ReactionOptimizer:
 
             # SECTION: optimize
             if method == 'minimize':
-                opt_res = optimize.minimize(fun=self.obj_fn,
-                                            x0=EOR0,
-                                            args=(initial_mole,
-                                                  pressure,
-                                                  temperature,
-                                                  equilibrium_constants,
-                                                  method),
-                                            method=minimize_algorithm,
-                                            bounds=EOR0_bounds,
-                                            constraints=cons1,
-                                            options={
-                                                'disp': False,
-                                                'ftol': 1e-12,
-                                                'maxiter': 1000
-                                            })
+                opt_res = optimize.minimize(
+                    fun=self.obj_fn,
+                    x0=EOR0,
+                    args=(
+                        initial_mole,
+                        pressure,
+                        temperature,
+                        equilibrium_constants,
+                        method
+                    ),
+                    method=minimize_algorithm,
+                    bounds=EOR0_bounds,
+                    constraints=cons1,
+                    options={
+                        'disp': False,
+                        'ftol': 1e-12,
+                        'maxiter': 1000
+                    }
+                )
             elif method == 'least_squares':
                 opt_res = optimize.least_squares(
                     fun=self.obj_fn,
                     x0=EOR0,
-                    args=(initial_mole,
-                          pressure,
-                          temperature,
-                          equilibrium_constants,
-                          method),
+                    args=(
+                        initial_mole,
+                        pressure,
+                        temperature,
+                        equilibrium_constants,
+                        method
+                    ),
                     bounds=EOR0_Bounds,
                     method=least_square_algorithm,
                 )
@@ -1320,7 +1333,8 @@ class ReactionOptimizer:
 
             # build final X
             Xfs, Xfs_vector, Nf, Nfs_vector = self.build_final_X(
-                N0s_vector, EoR_vector)
+                N0s_vector, EoR_vector
+            )
 
             # Nfs
             Nfs = {}

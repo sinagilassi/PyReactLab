@@ -413,13 +413,14 @@ class ChemicalPotential:
             raise Exception(
                 f"Error in calculating the gibbs energy of formation: {str(e)}") from e
 
-    def chemical_potential_gas_mixture(self,
-                                       temperature: Temperature,
-                                       pressure: Pressure,
-                                       chemical_potential_pure: Dict[str, Any],
-                                       gas_mixture: str = 'ideal',
-                                       **kwargs
-                                       ) -> Dict[str, float]:
+    def chemical_potential_gas_mixture(
+        self,
+        temperature: Temperature,
+        pressure: Pressure,
+        chemical_potential_pure: Dict[str, Any],
+        gas_mixture: str = 'ideal',
+        **kwargs
+    ) -> Dict[str, float]:
         '''
         Calculate the component fugacity coefficient for gaseous mixture.
 
@@ -448,6 +449,10 @@ class ChemicalPotential:
             A dictionary containing the chemical potential for each component in the gaseous mixture.
         '''
         try:
+            # SECTION: constants
+            # universal gas constant [J/mol.K]
+            R = self.R
+
             # SECTION: prepare model input
             # NOTE: gas mixture
             component_list: List[str] = self.phase_contents.get('g', [])
@@ -461,13 +466,21 @@ class ChemicalPotential:
 
             # NOTE: get mole fraction
             N0s = {}
+            N0s_REAL = {}
 
             # looping through phase stream
             for key, value in phase_stream_gas.items():
                 # check if key is in component list
                 if key in component_list:
-                    # set mole fraction
-                    N0s[key] = value['phase_mole_fraction']
+                    # get mole fraction
+                    mole_fraction_ = value['phase_mole_fraction']
+
+                    # set real mole fraction
+                    N0s_REAL[key] = mole_fraction_
+
+                    if mole_fraction_ > 0 and mole_fraction_ <= 1:
+                        # set mole fraction for fugacity coefficient calculation
+                        N0s[key] = mole_fraction_
 
             # SECTION: model input
             # set
@@ -485,7 +498,7 @@ class ChemicalPotential:
 
             # SECTION: calculate the chemical potential
             # init
-            ChePot_comp = {}
+            ChPo_comp = {}
 
             # check
             if gas_mixture == 'ideal':
@@ -507,7 +520,7 @@ class ChemicalPotential:
             # NOTE: calculate the chemical potential for each component
             # looping through each component
             for component in component_list:
-                # NOTE: get chemical potential [J/mol]
+                # NOTE: get chemical potential [J/mol] (Gibbs energy of formation at T)
                 ChePot_std_ = chemical_potential_pure.get(component, None)
 
                 # check
@@ -517,35 +530,43 @@ class ChemicalPotential:
 
                 # NOTE: calculate chemical potential
                 # mole fraction
-                y_i = N0s[component]
-                phi_i = phi_comp[component]
-                T = temperature['value']  # temperature [K]
-                P = pressure['value']  # pressure [bar]
-                P0 = self.P_Ref_bar  # reference pressure [bar]
-                R = self.R  # universal gas constant [J/mol.K]
-                # mixture term [J/mol]
-                _term_ = y_i * phi_i
-                log_term_ = log(_term_)
-                # calc
-                mixture_term_ = R * T * log_term_
+                y_i = N0s_REAL[component]
 
-                # calc [J/mol]
-                ChePot_comp[component] = ChePot_std_['value'] + mixture_term_
+                # ! check if mole fraction is zero
+                if y_i > 0:
+                    # fugacity coefficient for the component
+                    phi_i = phi_comp[component]
+                    # temperature [K]
+                    T = temperature['value']
+                    # mixture term [J/mol]
+                    _term_ = y_i * phi_i
+                    log_term_ = log(_term_)
+                    mixture_term_ = R * T * log_term_
+
+                    # ? component chemical potential in the mixture [J/mol]
+                    ChPo_comp[component] = ChePot_std_[
+                        'value'
+                    ] + mixture_term_
+                else:
+                    # ? if mole fraction is zero, set chemical potential to zero
+                    # calc [J/mol]
+                    ChPo_comp[component] = 0.0
 
             # NOTE: res
-            return ChePot_comp
+            return ChPo_comp
 
         except Exception as e:
             raise Exception(
                 f"Error in calculating the gas mixture term: {str(e)}") from e
 
-    def chemical_potential_solution(self,
-                                    temperature: Temperature,
-                                    pressure: Pressure,
-                                    chemical_potential_pure: Dict[str, Any],
-                                    solution: str = 'ideal',
-                                    **kwargs
-                                    ) -> Dict[str, float]:
+    def chemical_potential_solution(
+        self,
+        temperature: Temperature,
+        pressure: Pressure,
+        chemical_potential_pure: Dict[str, Any],
+        solution: str = 'ideal',
+        **kwargs
+    ) -> Dict[str, float]:
         '''
         Calculate the component chemical potential for solution.
 
@@ -571,6 +592,10 @@ class ChemicalPotential:
         Returns
         '''
         try:
+            # SECTION: constants
+            # universal gas constant [J/mol.K]
+            R = self.R
+
             # SECTION: prepare model input
             # NOTE: gas mixture
             component_list: List[str] = self.phase_contents.get('l', [])
@@ -584,13 +609,22 @@ class ChemicalPotential:
 
             # NOTE: get mole fraction
             N0s = {}
+            N0s_REAL = {}
 
             # looping through phase stream
             for key, value in phase_stream_gas.items():
                 # check if key is in component list
                 if key in component_list:
-                    # set mole fraction
-                    N0s[key] = value['phase_mole_fraction']
+
+                    # get mole fraction
+                    mole_fraction_ = value['phase_mole_fraction']
+
+                    # set real mole fraction
+                    N0s_REAL[key] = mole_fraction_
+
+                    if mole_fraction_ > 0 and mole_fraction_ <= 1:
+                        # set mole fraction for activity coefficient calculation
+                        N0s[key] = mole_fraction_
 
             # SECTION: model input
             # set
@@ -604,7 +638,7 @@ class ChemicalPotential:
 
             # SECTION: calculate the chemical potential
             # init
-            ChePot_comp = {}
+            ChPo_comp = {}
 
             # check
             if solution == 'ideal':
@@ -636,22 +670,29 @@ class ChemicalPotential:
 
                 # NOTE: calculate chemical potential
                 # mole fraction
-                x_i = N0s[component]
-                AcCo_i = AcCo_i_comp[component]
-                T = temperature['value']  # temperature [K]
-                P = pressure['value']  # pressure [bar]
-                R = self.R  # universal gas constant [J/mol.K]
-                # mixture term [J/mol]
-                _term_ = x_i * AcCo_i
-                log_term_ = log(_term_)
-                # calc
-                mixture_term_ = R * T * log_term_
+                x_i = N0s_REAL[component]
 
-                # calc [J/mol]
-                ChePot_comp[component] = ChePot_std_['value'] + mixture_term_
+                # check if mole fraction is zero
+                if x_i > 0:
+                    # activity coefficient for the component
+                    AcCo_i = AcCo_i_comp[component]
+                    T = temperature['value']  # temperature [K]
+                    # mixture term [J/mol]
+                    _term_ = x_i * AcCo_i
+                    log_term_ = log(_term_)
+                    # calc
+                    mixture_term_ = R * T * log_term_
+
+                    # calc [J/mol]
+                    ChPo_comp[component] = ChePot_std_[
+                        'value'
+                    ] + mixture_term_
+                else:
+                    # if mole fraction is zero, set chemical potential to zero
+                    ChPo_comp[component] = 0.0
 
             # NOTE: res
-            return ChePot_comp
+            return ChPo_comp
 
         except Exception as e:
             raise Exception(
@@ -694,30 +735,35 @@ class ChemicalPotential:
             pressure = operating_conditions['pressure']
 
             # SECTION: calculate the standard chemical potential at the given temperature
-            chemical_potential_pure_comp = self.calc_chemical_potential_pure(
+            # NOTE: it has terms as:
+            # chemical potential of pure component at 298.15 K
+            # deviation from the standard state at the given temperature
+            # deviation from standard state pressure (ignored)
+            # non-ideality correction for gas mixture or solution (ignored)
+            ChPo_PURE_T_P_comp = self.calc_chemical_potential_pure(
                 temperature=temperature['value'],
             )
 
             # SECTION: gas chemical potential
-            ChePot_MIXTURE = self.chemical_potential_gas_mixture(
+            ChPo_mixture_T_P_comp = self.chemical_potential_gas_mixture(
                 temperature=temperature,
                 pressure=pressure,
-                chemical_potential_pure=chemical_potential_pure_comp,
+                chemical_potential_pure=ChPo_PURE_T_P_comp,
                 gas_mixture=gas_mixture,
             )
 
             # SECTION: solution chemical potential
-            ChePot_SOLUTION = self.chemical_potential_solution(
+            ChPo_solution_T_P_comp = self.chemical_potential_solution(
                 temperature=temperature,
                 pressure=pressure,
-                chemical_potential_pure=chemical_potential_pure_comp,
+                chemical_potential_pure=ChPo_PURE_T_P_comp,
                 solution=solution,
             )
 
             # SECTION: combine chemical potentials
-            ChePot = {
-                **ChePot_MIXTURE,
-                **ChePot_SOLUTION
+            ChPo_comp = {
+                **ChPo_mixture_T_P_comp,
+                **ChPo_solution_T_P_comp
             }
 
             # NOTE: calculate the actual Gibbs energy for each reaction
@@ -729,13 +775,13 @@ class ChemicalPotential:
                     self.ReactionAnalyzer_\
                     .calc_actual_gibbs_energy_of_reaction(
                         reaction=reaction,
-                        chemical_potential=ChePot,
+                        chemical_potential=ChPo_comp,
                         temperature=temperature,
                         pressure=pressure,
                 )
 
                 # res
-            return {}
+            return res
         except Exception as e:
             raise Exception(
                 f"Error in calculating the chemical potential at the given temperature: {str(e)}") from e

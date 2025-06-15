@@ -456,6 +456,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 - activity_model: Activity model to use for the calculation. Options are "NRTL" or "UNIFAC".
                 - message: Optional message to display during the calculation.
 
+
         Returns
         -------
         dict
@@ -606,9 +607,12 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
 
             # NOTE: build mole and mole fraction matrix regarding the component dict
             # check
-            if initial_mole is not None and initial_mole_fraction is not None:
+            if (initial_mole is not None and
+                    initial_mole_fraction is not None):
                 # set values
-                initial_mole_std, initial_mole_fraction_std, _, _ = ReactionAnalyzer.set_stream(
+                (
+                    initial_mole_std, initial_mole_fraction_std, _, _
+                ) = ReactionAnalyzer.set_stream(
                     component_dict=self.component_dict,
                     mole=initial_mole,
                     mole_fraction=initial_mole_fraction,
@@ -1012,7 +1016,6 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                         raise ValueError(
                             "Initial mole fraction value must be a number.")
 
-                # ? normalize
                 # check if sum of mole fraction is 1
                 initial_mole_fraction = ReactionAnalyzer.norm_mole_fraction(
                     initial_mole_fraction)
@@ -1037,7 +1040,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                         raise ValueError(
                             "Initial mole value must be a number.")
 
-                # set initial mole (remove zero values)
+                # set initial mole
                 initial_mole = ReactionAnalyzer.set_initial_mole(
                     initial_mole,
                     minimum_mole=minimum_mole
@@ -1051,7 +1054,9 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             # check
             if initial_mole is not None and initial_mole_fraction is not None:
                 # set values
-                initial_mole_std, initial_mole_fraction_std, _, _ = ReactionAnalyzer.set_stream(
+                (
+                    initial_mole_std, initial_mole_fraction_std, _, _
+                ) = ReactionAnalyzer.set_stream(
                     component_dict=self.component_dict,
                     mole=initial_mole,
                     mole_fraction=initial_mole_fraction,

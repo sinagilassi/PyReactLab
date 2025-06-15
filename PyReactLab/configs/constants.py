@@ -89,3 +89,9 @@ GIBBS_FREE_ENERGY_OF_FORMATION_T_SYMBOL = 'GiEnFo_T'
 # enthalpy of formation at T
 ENTHALPY_OF_FORMATION_T = 'enthalpy_of_formation_T'
 ENTHALPY_OF_FORMATION_T_SYMBOL = 'EnFo_T'
+# chemical potential in the mixture at T and P
+CHEMICAL_POTENTIAL_MIXTURE_T_P = 'chemical_potential_mixture_T_P'
+CHEMICAL_POTENTIAL_MIXTURE_T_P_SYMBOL = 'ChPo_mix_T_P'
+# actual gibbs energy of reaction at T and P
+ACTUAL_GIBBS_FREE_ENERGY_OF_REACTION = 'actual_gibbs_free_energy_of_reaction'
+ACTUAL_GIBBS_FREE_ENERGY_OF_REACTION_SYMBOL = 'GiEn_rxn_actual'
