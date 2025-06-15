@@ -10,7 +10,11 @@ from .thermolinkdb import ThermoLinkDB
 from .refmanager import ReferenceManager
 from .reactionanalyzer import ReactionAnalyzer
 from .optim import ReactionOptimizer
-from ..utils import ChemReactUtils
+from ..utils import (
+    ChemReactUtils,
+    Temperature,
+    Pressure,
+    OperatingConditions,)
 from .chemicalpotential import ChemicalPotential
 
 
@@ -75,6 +79,14 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
         if self.__reactions is None:
             raise ValueError("No reactions found.")
         return self.__reactions
+
+    @property
+    def reaction_list(self) -> Dict[str, Reaction]:
+        """Get the list of reactions (object) in the reaction system."""
+        # check
+        if not self.__reaction_list:
+            raise ValueError("No reactions found in the reaction system.")
+        return self.__reaction_list
 
     def select_reaction(self, reaction_name: str) -> Reaction:
         """
@@ -876,6 +888,8 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 - eos_model: Equation of state model to use for the calculation. Options are "SRK" or "PR".
                 - activity_model: Activity model to use for the calculation. Options are "NRTL" or "UNIFAC".
                 - message: Optional message to display during the calculation.
+                - mole_basis: 1 mole
+                - minimum_mole: Minimum mole for the initial mole, by default 1e-5.
 
         Returns
         -------
@@ -895,6 +909,11 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                 raise ValueError(
                     "Overall reaction phase is not set. Please run the primary analysis first.")
 
+            # mole basis
+            mole_basis = kwargs.get("mole_basis", 1.0)
+            # minimum mole
+            minimum_mole = kwargs.get("minimum_mole", 1e-5)
+
             # SECTION: check args
             # NOTE: check if inputs are valid
             if not isinstance(inputs, dict):
@@ -908,6 +927,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             if "pressure" not in inputs:
                 raise ValueError("Inputs must contain pressure.")
 
+            # SECTION: set temperature and pressure
             # NOTE: check if temperature is valid
             # set
             temperature = inputs["temperature"]
@@ -930,6 +950,11 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             # set unit
             unit_set = f"{temperature[1]} => K"
             temperature_K = pycuc.to(temperature[0], unit_set)
+            # set temperature
+            temperature = Temperature(
+                value=temperature_K,
+                unit="K"
+            )
 
             # NOTE: check if pressure is valid
             # set
@@ -953,7 +978,19 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             # set unit
             unit_set = f"{pressure[1]} => bar"
             pressure_bar = pycuc.to(pressure[0], unit_set)
+            # set pressure
+            pressure = Pressure(
+                value=pressure_bar,
+                unit="bar"
+            )
 
+            # NOTE: set operating conditions
+            operating_conditions = OperatingConditions(
+                temperature=temperature,
+                pressure=pressure,
+            )
+
+            # SECTION:
             # NOTE: check if initial mole fraction is valid
             # set
             initial_mole_fraction = inputs.get("mole_fraction", None)
@@ -982,7 +1019,9 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
 
                 # NOTE: convert to mole fraction
                 initial_mole = ReactionAnalyzer.cal_mole(
-                    initial_mole_fraction)
+                    initial_mole_fraction,
+                    mole_basis
+                )
 
             elif initial_mole is not None:
                 # check if initial mole is valid
@@ -997,6 +1036,12 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                     if not isinstance(initial_mole[key], (int, float)):
                         raise ValueError(
                             "Initial mole value must be a number.")
+
+                # set initial mole (remove zero values)
+                initial_mole = ReactionAnalyzer.set_initial_mole(
+                    initial_mole,
+                    minimum_mole=minimum_mole
+                )
 
                 # NOTE: convert to mole fraction
                 initial_mole_fraction, _ = ReactionAnalyzer.cal_mole_fraction(
@@ -1038,16 +1083,20 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
                     "Invalid activity model. Options are 'NRTL' or 'UNIQUAC'.")
 
             # SECTION: init chemical potential
+            # init
             ChemicalPotential_ = ChemicalPotential(
                 self.datasource,
                 self.equationsource,
-                self.__reaction_list,
+                self.reaction_list,
                 self.component_dict,
+                self.component_state_list,
                 self.coeff_list_dict,
                 self.reaction_analysis,
                 self.phase_stream,
+                self.phase_contents,
                 self.overall_reaction_analysis,
                 self.overall_reaction_phase,
+                operating_conditions=operating_conditions,
             )
 
             # SECTION: setting up the chemical potential
@@ -1099,18 +1148,13 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             # solution
             ChemicalPotential_.solution = solution
 
-            # SECTION: calculate the chemical potential at the given temperature
-            chemical_potential_T_comp = ChemicalPotential_.\
-                cal_chemical_potential_term(
-                    component_state_list=self.component_state_list,
-                    temperature=temperature_K,
-                )
-
-            # SECTION: calculate the actual Gibbs free energy of reaction
-
-            # SECTION: set results
-            # res
-            res = {}
+            # SECTION: the actual Gibbs free energy of reaction
+            # calc
+            res = ChemicalPotential_.cal_actual_gibbs_energy_of_reaction(
+                operating_conditions=operating_conditions,
+                gas_mixture=gas_mixture,
+                solution=solution,
+            )
 
             # NOTE: set time
             # ! Stop timing

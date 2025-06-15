@@ -1,6 +1,7 @@
 # import libs
 import numpy as np
 from typing import Literal, Dict, Any, List
+from math import log
 # local
 # local
 from ..configs import (
@@ -9,11 +10,54 @@ from ..configs import (
 )
 from .reaction import Reaction
 from .reactionanalyzer import ReactionAnalyzer
+from ..utils import (
+    Temperature,
+    Pressure,
+    OperatingConditions,
+)
 
 
 class ChemicalPotential:
     """
     Class to calculate chemical potential of a reaction system.
+
+    Notes
+    -----
+    The fugacity of an ideal-mixture gas component is defined as:
+
+        f_i_ID = y_i * f_i_ID_PURE = y_i * P
+
+    The Fugacity of an ideal-solution liquid component is defined as:
+
+        f_i_ID(T,P,x) = x_i * f_i(T,P)
+
+    f_i(T,P) is calculated using EOS (the smallest Z) or Poynting equation.
+
+    The chemical potential of ideal-solution liquid component is defined as:
+
+        μ_i_ID(T,P,x) = GiEnFo(T,P) + RT * ln(f_i_ID(T,P,x)/f_i(T,P))
+        μ_i_ID(T,P,x) = GiEnFo(T,P) + RT * ln(x_i)
+
+    The chemical potential of ideal-gas component is defined as:
+
+        μ_i_ID(T,P,y) = GiEnFo(T,P) + RT * ln(f_i_ID(T,P,y)/f_i(T,P))
+        μ_i_ID(T,P,y) = GiEnFo(T,P) + RT * ln(y_i)
+
+    The chemical potential of non-ideal-gas component is defined as:
+
+        μ_i_NID(T,P,y) = μ_i_ID(T,P,y) + RT * ln(φ_i(T,P,y))
+
+        φ_i(T,P,y) = f_i_NID(T,P,y) / f_i_ID(T,P,y)
+
+        μ_i_NID(T,P,y) = GiEnFo(T,P) + RT * ln(y_i) + RT * ln(φ_i(T,P,y))
+
+    The chemical potential of non-ideal-solution component is defined as:
+
+        μ_i_NID(T,P,x) = μ_i_ID(T,P,x) + RT * ln(AcCo_i(T,P,x))
+
+        AcCo_i(T,P,x) = f_i_NID(T,P,x) / f_i_ID(T,P,x)
+
+        μ_i_NID(T,P,x) = GiEnFo(T,P) + RT * ln(x_i) + RT * ln(AcCo_i(T,P,x))
     """
     # SECTION: attributes
     # system name
@@ -50,9 +94,11 @@ class ChemicalPotential:
                  equationsource: Dict[str, Any],
                  reaction_list: Dict[str, Reaction],
                  component_dict: Dict[str, float | int],
+                 component_state_list: List[tuple],
                  comp_list: List[Dict[str, float | int]],
                  reaction_analysis: Dict,
                  phase_stream: Dict[str, Any],
+                 phase_contents: Dict[str, Any],
                  overall_reaction_analysis: Dict,
                  overall_reaction_phase: str,
                  **kwargs):
@@ -84,6 +130,8 @@ class ChemicalPotential:
         self.equationsource = equationsource
         # set component dictionary
         self.component_dict = component_dict
+        # set component state list
+        self.component_state_list = component_state_list
         # reaction list
         self.reaction_list = reaction_list
         # set component list
@@ -92,6 +140,8 @@ class ChemicalPotential:
         self.reaction_analysis = reaction_analysis
         # phase stream
         self.phase_stream = phase_stream
+        # set phase contents
+        self.phase_contents = phase_contents
         # set overall reaction analysis
         self.overall_reaction_analysis = overall_reaction_analysis
         # set overall reaction phase
@@ -124,6 +174,9 @@ class ChemicalPotential:
     @property
     def eos_model(self):
         '''Get eos model'''
+        if self._eos_model is None:
+            # set default eos model
+            self._eos_model = 'SRK'
         return self._eos_model
 
     @eos_model.setter
@@ -135,6 +188,9 @@ class ChemicalPotential:
     @property
     def activity_model(self):
         '''Get activity model name'''
+        if self._activity_model is None:
+            # set default activity model
+            self._activity_model = 'NRTL'
         return self._activity_model
 
     @activity_model.setter
@@ -189,9 +245,7 @@ class ChemicalPotential:
 
     def _cal_fugacity_coefficient_gaseous_mixture(
         self,
-        model_name: Literal[
-            "SRK", "PR", "RK"
-        ],
+        model_name: str,
         model_input: Dict[str, Any]
     ):
         """
@@ -251,9 +305,7 @@ class ChemicalPotential:
 
     def _cal_activity_coefficient_solution(
         self,
-        model_name: Literal[
-            'NRTL', 'UNIQUAC'
-        ],
+        model_name: str,
         model_input: Dict[str, Any],
     ):
         """
@@ -308,29 +360,32 @@ class ChemicalPotential:
             raise Exception(
                 f"Error in calculating the fugacity coefficient for the liquid mixture: {str(e)}") from e
 
-    def cal_chemical_potential_term(
+    def calc_chemical_potential_pure(
         self,
-        component_state_list: List[tuple],
         temperature: float
     ) -> Dict[str, Any]:
         '''
-        Calculate the chemical potential of a reaction system at a given temperature.
+        Calculate the pure chemical potential of a reaction system at a given temperature.
+        The chemical potential of pure component contains the Gibbs energy of formation at 298.15 K and deviation from the standard state at the given temperature. No correction for pressure is applied, and also no correction for non-ideality is applied.
 
         Parameters
         ----------
-        component_state_list : list of tuples
-            List of component states, each tuple should contain (molecule, state, molecule_state).
-            Example: [('CO2', 'g', 'CO2-g'), ('H2', 'g', 'H2-g'), ...]
         temperature : float
-            Temperature (K) at which to calculate the chemical potential.
+            Temperature in Kelvin [K] at which to calculate the chemical potential.
+
+
+        Returns
+        -------
+        Dict[str, Any]
+            A dictionary containing the chemical potential for each component at the specified temperature.
         '''
         try:
             # NOTE:
             # SECTION: calculate the chemical potential at the given temperature
-            chemical_potential_T_comp = {}
+            ChePot_PURE = {}
 
             # loop through each component
-            for component in component_state_list:
+            for component in self.component_state_list:
                 # NOTE: check if component is valid
                 if len(component) != 3:
                     raise ValueError(
@@ -349,28 +404,338 @@ class ChemicalPotential:
                     res_format='symbolic',
                 )
 
-                # save
-                chemical_potential_T_comp[key_] = res_
+                # set
+                ChePot_PURE[key_] = res_['GiEnFo_T']
 
-            # NOTE: return chemical potential
-            return chemical_potential_T_comp
+            # NOTE: return chemical potential pure at T
+            return ChePot_PURE
         except Exception as e:
             raise Exception(
-                f"Error in calculating the chemical potential: {str(e)}") from e
+                f"Error in calculating the gibbs energy of formation: {str(e)}") from e
 
-    def gas_mixture_term(self):
-        pass
+    def chemical_potential_gas_mixture(self,
+                                       temperature: Temperature,
+                                       pressure: Pressure,
+                                       chemical_potential_pure: Dict[str, Any],
+                                       gas_mixture: str = 'ideal',
+                                       **kwargs
+                                       ) -> Dict[str, float]:
+        '''
+        Calculate the component fugacity coefficient for gaseous mixture.
 
-    def solution_term(self):
-        pass
+        Parameters
+        ----------
+        temperature : Temperature
+            Temperature reference for the reaction system.
+            - value: float
+            - unit: 'K'
+        pressure : Pressure
+            Pressure reference for the reaction system.
+            - value: float
+            - unit: 'bar'
+        chemical_potential_std : dict
+            Dictionary containing the standard chemical potential for each component.
+            - key: component name (e.g., 'CO2-g')
+            - value: standard chemical potential value (float)
+        gas_mixture : str, optional
+            The gas mixture model to use for the calculation. Options: 'ideal', 'SRK', 'PR', 'RK'.
+        **kwargs : dict, optional
+            Additional keyword arguments for the calculation, such as temperature and pressure.
+
+        Returns
+        -------
+        Dict[str, float] | None
+            A dictionary containing the chemical potential for each component in the gaseous mixture.
+        '''
+        try:
+            # SECTION: prepare model input
+            # NOTE: gas mixture
+            component_list: List[str] = self.phase_contents.get('g', [])
+            # NOTE: phase stream
+            phase_stream_gas = self.phase_stream.get('g', {})
+
+            # NOTE: continue calculation
+            # ! check if component_list is empty
+            if len(component_list) == 0:
+                return {}
+
+            # NOTE: get mole fraction
+            N0s = {}
+
+            # looping through phase stream
+            for key, value in phase_stream_gas.items():
+                # check if key is in component list
+                if key in component_list:
+                    # set mole fraction
+                    N0s[key] = value['phase_mole_fraction']
+
+            # SECTION: model input
+            # set
+            model_input = {
+                'feed-specification': N0s,
+                'pressure': [
+                    pressure['value'],
+                    pressure['unit']
+                ],
+                'temperature': [
+                    temperature['value'],
+                    temperature['unit']
+                ],
+            }
+
+            # SECTION: calculate the chemical potential
+            # init
+            ChePot_comp = {}
+
+            # check
+            if gas_mixture == 'ideal':
+                # fugacity coefficient for ideal gas mixture
+                phi_comp = {
+                    component: 1.0 for component in component_list
+                }
+
+            elif gas_mixture == 'non-ideal':
+                # calculate the fugacity coefficient
+                phi_comp = self._cal_fugacity_coefficient_gaseous_mixture(
+                    model_name=self.eos_model,
+                    model_input=model_input
+                )
+            else:
+                raise ValueError(
+                    f"Invalid gas mixture model: {gas_mixture}. Must be 'ideal' or 'non-ideal'.")
+
+            # NOTE: calculate the chemical potential for each component
+            # looping through each component
+            for component in component_list:
+                # NOTE: get chemical potential [J/mol]
+                ChePot_std_ = chemical_potential_pure.get(component, None)
+
+                # check
+                if ChePot_std_ is None:
+                    raise ValueError(
+                        f"Chemical potential for component {component} not found in standard chemical potential dictionary.")
+
+                # NOTE: calculate chemical potential
+                # mole fraction
+                y_i = N0s[component]
+                phi_i = phi_comp[component]
+                T = temperature['value']  # temperature [K]
+                P = pressure['value']  # pressure [bar]
+                P0 = self.P_Ref_bar  # reference pressure [bar]
+                R = self.R  # universal gas constant [J/mol.K]
+                # mixture term [J/mol]
+                _term_ = y_i * phi_i
+                log_term_ = log(_term_)
+                # calc
+                mixture_term_ = R * T * log_term_
+
+                # calc [J/mol]
+                ChePot_comp[component] = ChePot_std_['value'] + mixture_term_
+
+            # NOTE: res
+            return ChePot_comp
+
+        except Exception as e:
+            raise Exception(
+                f"Error in calculating the gas mixture term: {str(e)}") from e
+
+    def chemical_potential_solution(self,
+                                    temperature: Temperature,
+                                    pressure: Pressure,
+                                    chemical_potential_pure: Dict[str, Any],
+                                    solution: str = 'ideal',
+                                    **kwargs
+                                    ) -> Dict[str, float]:
+        '''
+        Calculate the component chemical potential for solution.
+
+        Parameters
+        ----------
+        temperature : Temperature
+            Temperature reference for the reaction system.
+            - value: float
+            - unit: 'K'
+        pressure : Pressure
+            Pressure reference for the reaction system.
+            - value: float
+            - unit: 'bar'
+        chemical_potential_std : dict
+            Dictionary containing the standard chemical potential for each component.
+            - key: component name (e.g., 'CO2-g')
+            - value: standard chemical potential value (float)
+        solution : str, optional
+            The solution model to use for the calculation. Options: 'ideal', 'NRTL', 'UNIQUAC'.
+        **kwargs : dict, optional
+            Additional keyword arguments for the calculation, such as temperature and pressure.
+
+        Returns
+        '''
+        try:
+            # SECTION: prepare model input
+            # NOTE: gas mixture
+            component_list: List[str] = self.phase_contents.get('l', [])
+            # NOTE: phase stream
+            phase_stream_gas = self.phase_stream.get('l', {})
+
+            # NOTE: continue calculation
+            # ! check if component_list is empty
+            if len(component_list) == 0:
+                return {}
+
+            # NOTE: get mole fraction
+            N0s = {}
+
+            # looping through phase stream
+            for key, value in phase_stream_gas.items():
+                # check if key is in component list
+                if key in component_list:
+                    # set mole fraction
+                    N0s[key] = value['phase_mole_fraction']
+
+            # SECTION: model input
+            # set
+            model_input = {
+                'mole_fraction': N0s,
+                'temperature': [
+                    temperature['value'],
+                    temperature['unit']
+                ],
+            }
+
+            # SECTION: calculate the chemical potential
+            # init
+            ChePot_comp = {}
+
+            # check
+            if solution == 'ideal':
+                # activity coefficient for ideal solution
+                AcCo_i_comp = {
+                    component: 1.0 for component in component_list
+                }
+
+            elif solution == 'non-ideal':
+                # calculate the activity coefficient
+                AcCo_i_comp = self._cal_activity_coefficient_solution(
+                    model_name=self.activity_model,
+                    model_input=model_input,
+                )
+            else:
+                raise ValueError(
+                    f"Invalid solution model: {solution}. Must be 'ideal', 'NRTL', or 'UNIQUAC'.")
+
+            # NOTE: calculate the chemical potential for each component
+            # looping through each component
+            for component in component_list:
+                # NOTE: get chemical potential [J/mol]
+                ChePot_std_ = chemical_potential_pure.get(component, None)
+
+                # check
+                if ChePot_std_ is None:
+                    raise ValueError(
+                        f"Chemical potential for component {component} not found in standard chemical potential dictionary.")
+
+                # NOTE: calculate chemical potential
+                # mole fraction
+                x_i = N0s[component]
+                AcCo_i = AcCo_i_comp[component]
+                T = temperature['value']  # temperature [K]
+                P = pressure['value']  # pressure [bar]
+                R = self.R  # universal gas constant [J/mol.K]
+                # mixture term [J/mol]
+                _term_ = x_i * AcCo_i
+                log_term_ = log(_term_)
+                # calc
+                mixture_term_ = R * T * log_term_
+
+                # calc [J/mol]
+                ChePot_comp[component] = ChePot_std_['value'] + mixture_term_
+
+            # NOTE: res
+            return ChePot_comp
+
+        except Exception as e:
+            raise Exception(
+                f"Error in calculating the solution term: {str(e)}") from e
 
     def cal_actual_gibbs_energy_of_reaction(
         self,
-        phase_contents: Dict[str, Any],
-        phase_stream: Dict[str, Any],
-        temperature: float,
-        pressure: float,
-        gas_mixture: str = 'ideal',
-        solution: str = 'ideal',
+        operating_conditions: OperatingConditions,
+        gas_mixture: str,
+        solution: str
     ):
-        pass
+        '''
+        Calculate the actual Gibbs energy of reaction at a given temperature and pressure.
+
+        Parameters
+        ----------
+        temperature : Temperature
+            Temperature reference for the reaction system.
+            - value: float
+            - unit: 'K'
+        pressure : Pressure
+            Pressure reference for the reaction system.
+            - value: float
+            - unit: 'bar'
+        gas_mixture : str
+            Gas mixture model to use for the calculation. Options: 'ideal', 'SRK', 'PR', 'RK'.
+            - ideal: Ideal gas mixture model.
+            - non-ideal: Non-ideal gas mixture model using SRK, PR, or RK EOS.
+        solution : str
+            Solution model to use for the calculation. Options: 'ideal', 'NRTL', 'UNIQUAC'.
+            - ideal: Ideal solution model.
+            - non-ideal: Non-ideal solution model using NRTL or UNIQUAC activity models.
+
+        '''
+        try:
+            # SECTION: set operating conditions
+            # temperature [K]
+            temperature = operating_conditions['temperature']
+            # pressure [bar]
+            pressure = operating_conditions['pressure']
+
+            # SECTION: calculate the standard chemical potential at the given temperature
+            chemical_potential_pure_comp = self.calc_chemical_potential_pure(
+                temperature=temperature['value'],
+            )
+
+            # SECTION: gas chemical potential
+            ChePot_MIXTURE = self.chemical_potential_gas_mixture(
+                temperature=temperature,
+                pressure=pressure,
+                chemical_potential_pure=chemical_potential_pure_comp,
+                gas_mixture=gas_mixture,
+            )
+
+            # SECTION: solution chemical potential
+            ChePot_SOLUTION = self.chemical_potential_solution(
+                temperature=temperature,
+                pressure=pressure,
+                chemical_potential_pure=chemical_potential_pure_comp,
+                solution=solution,
+            )
+
+            # SECTION: combine chemical potentials
+            ChePot = {
+                **ChePot_MIXTURE,
+                **ChePot_SOLUTION
+            }
+
+            # NOTE: calculate the actual Gibbs energy for each reaction
+            res = {}
+
+            for reaction_name, reaction in self.reaction_analysis.items():
+                # calculate the actual Gibbs energy of reaction
+                res[reaction_name] = \
+                    self.ReactionAnalyzer_\
+                    .calc_actual_gibbs_energy_of_reaction(
+                        reaction=reaction,
+                        chemical_potential=ChePot,
+                        temperature=temperature,
+                        pressure=pressure,
+                )
+
+                # res
+            return {}
+        except Exception as e:
+            raise Exception(
+                f"Error in calculating the chemical potential at the given temperature: {str(e)}") from e

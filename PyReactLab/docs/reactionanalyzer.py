@@ -19,6 +19,10 @@ from ..configs import (
     GIBBS_FREE_ENERGY_OF_FORMATION_T, ENTHALPY_OF_FORMATION_T,
     GIBBS_FREE_ENERGY_OF_FORMATION_T_SYMBOL, ENTHALPY_OF_FORMATION_T_SYMBOL
 )
+from ..utils import (
+    Temperature,
+    Pressure
+)
 
 
 class ReactionAnalyzer:
@@ -1024,14 +1028,17 @@ class ReactionAnalyzer:
         if total_mole_fraction == 0:
             raise ValueError("Total mole fraction is zero, cannot normalize.")
 
+        # check any zero mole fraction, set minimum value to 1e-5
+        for key, value in mole_fraction.items():
+            if value < 1e-5:
+                mole_fraction[key] = 1e-5
+
+        # recalculate total mole fraction
+        total_mole_fraction = sum(mole_fraction.values())
+
         # Normalize mole fraction
         normalized_mole_fraction = {key: value / total_mole_fraction for key,
                                     value in mole_fraction.items()}
-
-        # check any zero mole fraction, set minimum value to 1e-5
-        for key, value in normalized_mole_fraction.items():
-            if value < 1e-5:
-                normalized_mole_fraction[key] = 1e-5
 
         return normalized_mole_fraction
 
@@ -1075,7 +1082,38 @@ class ReactionAnalyzer:
         return mole_fraction, total_mole_fraction
 
     @staticmethod
-    def cal_mole(initial_mole_fraction: Dict[str, float | int]):
+    def set_initial_mole(
+        initial_mole: Dict[str, float | int],
+        minimum_mole: float = 1e-5
+    ):
+        """
+        Set initial moles (Xi) of each species in a reaction system.
+
+        Parameters
+        ----------
+        initial_mole : dict
+            Dictionary with species as keys and initial moles as values.
+
+        Returns
+        -------
+
+        """
+        try:
+            # set minimum for zero mole
+            initial_mole = {
+                key: value if value >= 1e-5 else minimum_mole for key,
+                value in initial_mole.items()
+            }
+
+            return initial_mole
+        except Exception as e:
+            raise Exception(f"Failed to set initial moles: {str(e)}") from e
+
+    @staticmethod
+    def cal_mole(
+        initial_mole_fraction: Dict[str, float | int],
+        mole_basis: float = 1.0
+    ):
         """
         Calculate the initial moles (Xi) of each species in a reaction system.
 
@@ -1083,14 +1121,22 @@ class ReactionAnalyzer:
         ----------
         initial_mole_fraction : dict
             Dictionary with species as keys and initial mole fractions as values.
+        mole_basis : float, optional
+            The basis for calculating moles, by default 1.0.
 
         Returns
         -------
         dict
             Dictionary with species as keys and initial moles as values.
         """
+        # set minimum for zero mole fraction
+        initial_mole_fraction = {
+            key: value if value >= 1e-5 else 1e-5 for key,
+            value in initial_mole_fraction.items()
+        }
+
         # Calculate total mole
-        total_mole = sum(initial_mole_fraction.values())
+        total_mole = sum(initial_mole_fraction.values()) * mole_basis
 
         # Calculate initial moles
         initial_moles = {key: value * total_mole for key,
@@ -1292,3 +1338,151 @@ class ReactionAnalyzer:
             return conversion
         except Exception as e:
             raise Exception(f"Failed to calculate conversion: {str(e)}") from e
+
+    def calc_actual_gibbs_energy_of_reaction(
+        self,
+        reaction: dict,
+        chemical_potential: Dict[str, float | int],
+        temperature: Temperature,
+        pressure: Pressure,
+        **kwargs
+    ):
+        '''
+        Calculates the actual Gibbs energy of reaction from the chemical potential.
+
+        Parameters
+        ----------
+        reaction : dict
+            The reaction to be analyzed.
+        chemical_potential : dict
+            Dictionary containing the chemical potential of each component in the reaction.
+        temperature : Temperature
+            The temperature at which to calculate the Gibbs energy of reaction.
+        pressure : Pressure
+            The pressure at which to calculate the Gibbs energy of reaction.
+        kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        list
+            change in Gibbs free energy and enthalpy of a reaction at different temperatures.
+        '''
+        # SECTION: kwargs
+
+        # NOTE: retrieve constants
+        # universal gas constant [J/mol.K]
+        R = self.__R
+        # temperature [K]
+        # T_ref = self.__T_Ref
+        # pressure [bar]
+        # P_ref = self.__P_Ref
+
+        # set temperature [K]
+        T = temperature
+
+        # SECTION: thermodb components results
+        thermodb = {}
+
+        # reaction name
+        reaction_name = reaction['name']
+        # reaction body
+        reaction_body = reaction['reaction']
+
+        # init
+        thermodb = {
+            'reaction': reaction_name,
+            'reaction-body': reaction_body,
+        }
+
+        # ? update
+        thermodb['temperature'] = {
+            'value': temperature['value'],
+            'symbol': 'T',
+            'unit': temperature['unit']
+        }
+        thermodb['pressure'] = {
+            'value': pressure['value'],
+            'symbol': 'P',
+            'unit': pressure['unit']
+        }
+        thermodb['parms'] = {
+            'reactants': {},
+            'products': {}
+        }
+
+        # SECTION: reactant energy analysis
+        # looping through reactants
+        for reactant in reaction['reactants']:
+            # molecule name
+            molecule_ = reactant['molecule']
+            # molecule state
+            molecule_state_ = reactant['molecule_state']
+
+            # retrieve chemical potential
+            res__ = chemical_potential.get(
+                molecule_state_, None)
+
+            # check if chemical potential is None
+            if res__ is None:
+                raise ValueError(
+                    f"Chemical potential for {molecule_state_} not found in the provided data.")
+
+            # save
+            thermodb['parms']['reactants'][molecule_state_] = res__
+
+        # SECTION: product energy analysis
+        # looping through products
+        for product in reaction['products']:
+            # molecule name
+            molecule_ = product['molecule']
+            # molecule state
+            molecule_state_ = product['molecule_state']
+
+            # calculate chemical potential
+            res__ = chemical_potential.get(
+                molecule_state_, None)
+
+            # check if chemical potential is None
+            if res__ is None:
+                raise ValueError(
+                    f"Chemical potential for {molecule_state_} not found in the provided data.")
+
+            # save
+            thermodb['parms']['products'][molecule_state_] = res__
+
+        # SECTION: calculate actual Gibbs energy of reaction
+        # overall energy analysis
+        _val_dGrxn_T = 0
+
+        # NOTE: looping through reactants
+        for reactant in reaction['reactants']:
+            # reactant name
+            reactant_name = reactant['molecule_state']
+            # src
+            src_ = thermodb['parms']['reactants'][reactant_name]
+
+            # dGrxn at T
+            _val_dGrxn_T -= src_[GIBBS_FREE_ENERGY_OF_FORMATION_T]['value'] * \
+                reactant['coefficient']
+
+        # NOTE: looping through products
+        for product in reaction['products']:
+            # product name
+            product_name = product['molecule_state']
+            # src
+            src_ = thermodb['parms']['products'][product_name]
+
+            # dGrxn at T
+            _val_dGrxn_T += src_[GIBBS_FREE_ENERGY_OF_FORMATION_T]['value'] * \
+                product['coefficient']
+
+        # NOTE: save
+        thermodb[GIBBS_FREE_ENERGY_OF_REACTION_T] = {
+            'value': float(_val_dGrxn_T),
+            'symbol': GIBBS_FREE_ENERGY_OF_REACTION_T_SYMBOL,
+            'unit': 'J/mol'
+        }
+
+        # res
+        return thermodb
