@@ -2,7 +2,7 @@
 
 ![PyReactLab](https://drive.google.com/uc?export=view&id=1lJqEBwChS8iCN3WcfYVk6Sv-HqAlzEIB)
 
-[![PyPI Downloads](https://static.pepy.tech/badge/mozichem-hub/month)](https://pepy.tech/projects/PyReactLab)
+[![PyPI Downloads](https://static.pepy.tech/badge/pyreactlab/month)](https://pepy.tech/projects/pyreactlab)
 ![PyPI](https://img.shields.io/pypi/v/PyReactLab)
 ![Python Version](https://img.shields.io/pypi/pyversions/PyReactLab.svg)
 ![License](https://img.shields.io/pypi/l/PyReactLab)
