@@ -10,11 +10,12 @@ class GasReactionSystem(ReactionSystem):
     # phase
     _phase: str = 'gas'
 
-    def __init__(self,
-                 system_name: str,
-                 reactions: List[Dict[str, Any]],
-                 model_source: Dict[str, Any]
-                 ):
+    def __init__(
+        self,
+        system_name: str,
+        reactions: List[Dict[str, Any]],
+        model_source: Dict[str, Any]
+    ):
         """
         Initialize the GasReactionSystem class.
 
@@ -29,10 +30,12 @@ class GasReactionSystem(ReactionSystem):
         model_source : dict
             Inputs for the reaction system which
         """
-        super().__init__(system_name=system_name,
-                         reactions=reactions,
-                         model_source=model_source,
-                         phase_rule=self._phase)
+        super().__init__(
+            system_name=system_name,
+            reactions=reactions,
+            model_source=model_source,
+            phase_rule=self._phase
+        )
 
         # NOTE: check phase
         self.checking_phase()

@@ -1,12 +1,21 @@
 # import libs
 import numpy as np
-from typing import Literal, Dict, Any, List
+from typing import (
+    Literal,
+    Dict,
+    Any,
+    List)
 from math import log
 # local
 # local
 from ..configs import (
-    R_CONST_J__molK, DATASOURCE, EQUATIONSOURCE,
-    PRESSURE_REF_Pa, TEMPERATURE_REF_K, EOS_MODELS, ACTIVITY_MODELS
+    R_CONST_J__molK,
+    DATASOURCE,
+    EQUATIONSOURCE,
+    PRESSURE_REF_Pa,
+    TEMPERATURE_REF_K,
+    EOS_MODELS,
+    ACTIVITY_MODELS
 )
 from .reaction import Reaction
 from .reactionanalyzer import ReactionAnalyzer

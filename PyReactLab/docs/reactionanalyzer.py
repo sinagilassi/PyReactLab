@@ -1,25 +1,51 @@
 # import libs
-from typing import Dict, Any, List, Literal, Optional
+from typing import (
+    Dict,
+    Any,
+    List,
+    Literal,
+    Optional
+)
 from math import exp
-from pyThermoDB import TableEquation, TableMatrixEquation, TableData, TableMatrixData
+from pyThermoDB import (
+    TableEquation,
+    TableMatrixEquation,
+    TableData,
+    TableMatrixData
+)
 import pycuc
 from scipy import integrate
 #  local
 from ..configs import (
-    R_CONST_J__molK, DATASOURCE, EQUATIONSOURCE,
-    PRESSURE_REF_Pa, TEMPERATURE_REF_K,
-    EQUILIBRIUM_CONSTANT_STD, EQUILIBRIUM_CONSTANT_STD_SYMBOL,
-    EQUILIBRIUM_CONSTANT, EQUILIBRIUM_CONSTANT_SYMBOL,
-    GIBBS_FREE_ENERGY_OF_REACTION_STD, GIBBS_FREE_ENERGY_OF_REACTION_STD_SYMBOL,
-    ENTHALPY_OF_REACTION_STD, ENTHALPY_OF_REACTION_STD_SYMBOL,
-    GIBBS_FREE_ENERGY_OF_FORMATION_STD, GIBBS_FREE_ENERGY_OF_FORMATION_STD_SYMBOL,
-    ENTHALPY_OF_FORMATION_STD, ENTHALPY_OF_FORMATION_STD_SYMBOL,
-    GIBBS_FREE_ENERGY_OF_REACTION_T, ENTHALPY_OF_REACTION_T,
-    GIBBS_FREE_ENERGY_OF_REACTION_T_SYMBOL, ENTHALPY_OF_REACTION_T_SYMBOL,
-    GIBBS_FREE_ENERGY_OF_FORMATION_T, ENTHALPY_OF_FORMATION_T,
-    GIBBS_FREE_ENERGY_OF_FORMATION_T_SYMBOL, ENTHALPY_OF_FORMATION_T_SYMBOL,
-    CHEMICAL_POTENTIAL_MIXTURE_T_P, CHEMICAL_POTENTIAL_MIXTURE_T_P_SYMBOL,
-    ACTUAL_GIBBS_FREE_ENERGY_OF_REACTION, ACTUAL_GIBBS_FREE_ENERGY_OF_REACTION_SYMBOL
+    R_CONST_J__molK,
+    DATASOURCE,
+    EQUATIONSOURCE,
+    PRESSURE_REF_Pa,
+    TEMPERATURE_REF_K,
+    EQUILIBRIUM_CONSTANT_STD,
+    EQUILIBRIUM_CONSTANT_STD_SYMBOL,
+    EQUILIBRIUM_CONSTANT,
+    EQUILIBRIUM_CONSTANT_SYMBOL,
+    GIBBS_FREE_ENERGY_OF_REACTION_STD,
+    GIBBS_FREE_ENERGY_OF_REACTION_STD_SYMBOL,
+    ENTHALPY_OF_REACTION_STD,
+    ENTHALPY_OF_REACTION_STD_SYMBOL,
+    GIBBS_FREE_ENERGY_OF_FORMATION_STD,
+    GIBBS_FREE_ENERGY_OF_FORMATION_STD_SYMBOL,
+    ENTHALPY_OF_FORMATION_STD,
+    ENTHALPY_OF_FORMATION_STD_SYMBOL,
+    GIBBS_FREE_ENERGY_OF_REACTION_T,
+    ENTHALPY_OF_REACTION_T,
+    GIBBS_FREE_ENERGY_OF_REACTION_T_SYMBOL,
+    ENTHALPY_OF_REACTION_T_SYMBOL,
+    GIBBS_FREE_ENERGY_OF_FORMATION_T,
+    ENTHALPY_OF_FORMATION_T,
+    GIBBS_FREE_ENERGY_OF_FORMATION_T_SYMBOL,
+    ENTHALPY_OF_FORMATION_T_SYMBOL,
+    CHEMICAL_POTENTIAL_MIXTURE_T_P,
+    CHEMICAL_POTENTIAL_MIXTURE_T_P_SYMBOL,
+    ACTUAL_GIBBS_FREE_ENERGY_OF_REACTION,
+    ACTUAL_GIBBS_FREE_ENERGY_OF_REACTION_SYMBOL
 )
 from ..utils import (
     Temperature,
@@ -51,10 +77,12 @@ class ReactionAnalyzer:
         # self.datasource = datasource
         # self.equationsource = equationsource
 
-    def datasource_extractor(self,
-                             datasource: Dict[str, Any],
-                             component_ids: List[str],
-                             property_name: str):
+    def datasource_extractor(
+        self,
+        datasource: Dict[str, Any],
+        component_ids: List[str],
+        property_name: str
+    ):
         """
         Extract a specific property from the datasource for a given component.
 
@@ -91,10 +119,12 @@ class ReactionAnalyzer:
             raise KeyError(
                 f"Property '{property_name}' not found for component '{component_id}'.") from e
 
-    def equationsource_extractor(self,
-                                 equationsource: Dict[str, Any],
-                                 component_ids: List[str],
-                                 equation_name: str):
+    def equationsource_extractor(
+        self,
+        equationsource: Dict[str, Any],
+        component_ids: List[str],
+        equation_name: str
+    ):
         """
         Extract a specific equation name from the equationsource for a given component.
 

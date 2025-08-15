@@ -1,5 +1,11 @@
 # import packages/modules
-from typing import Dict, List, Literal, Optional, Any
+from typing import (
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Any
+)
 import numpy as np
 from math import sqrt, pow, exp, log
 from scipy import optimize
@@ -7,8 +13,13 @@ from pyThermoModels import NRTL, UNIQUAC
 from scipy.optimize import Bounds, NonlinearConstraint
 # local
 from ..configs import (
-    R_CONST_J__molK, DATASOURCE, EQUATIONSOURCE,
-    PRESSURE_REF_Pa, TEMPERATURE_REF_K, EOS_MODELS, ACTIVITY_MODELS
+    R_CONST_J__molK,
+    DATASOURCE,
+    EQUATIONSOURCE,
+    PRESSURE_REF_Pa,
+    TEMPERATURE_REF_K,
+    EOS_MODELS,
+    ACTIVITY_MODELS
 )
 
 
@@ -44,15 +55,17 @@ class ReactionOptimizer:
     # solution
     _solution = 'ideal'
 
-    def __init__(self,
-                 datasource: Dict[str, Any],
-                 equationsource: Dict[str, Any],
-                 component_dict: Dict[str, float | int],
-                 comp_list: List[Dict[str, float | int]],
-                 stoichiometric_coeff: np.ndarray,
-                 reaction_analysis: Dict,
-                 overall_reaction_analysis: Dict,
-                 **kwargs):
+    def __init__(
+        self,
+        datasource: Dict[str, Any],
+        equationsource: Dict[str, Any],
+        component_dict: Dict[str, float | int],
+        comp_list: List[Dict[str, float | int]],
+        stoichiometric_coeff: np.ndarray,
+        reaction_analysis: Dict,
+        overall_reaction_analysis: Dict,
+        **kwargs
+    ):
         '''
         Initialize ReactionOptimizer class
 
@@ -302,14 +315,15 @@ class ReactionOptimizer:
             raise Exception(
                 f"Error in ReactionOptimizer.build_final_X(): {str(e)}") from e
 
-    def obj_fn(self,
-               x,
-               N0s: Dict[str, float],
-               P: float,
-               T: float,
-               equilibrium_constants: Dict[str, float],
-               method: Literal['minimize', 'least_squares'],
-               ):
+    def obj_fn(
+        self,
+        x,
+        N0s: Dict[str, float],
+        P: float,
+        T: float,
+        equilibrium_constants: Dict[str, float],
+        method: Literal['minimize', 'least_squares'],
+    ):
         '''
         Objective function for optimization
 
@@ -715,9 +729,11 @@ class ReactionOptimizer:
                 raise ValueError(
                     f"Invalid EOS model. Must be {EOS_MODELS}.")
 
-            res = eos.cal_fugacity_mixture(model_name=model_name,
-                                           model_input=model_input,
-                                           model_source=model_source)
+            res = eos.cal_fugacity_mixture(
+                model_name=model_name,
+                model_input=model_input,
+                model_source=model_source
+            )
 
             # NOTE: extract fugacity coefficient for each component
             res_1 = res['vapor']
@@ -1042,15 +1058,17 @@ class ReactionOptimizer:
 
         return cons
 
-    def opt_run(self,
-                initial_mole: Dict[str, float | int],
-                initial_mole_fraction: Dict[str, float | int],
-                pressure: float,
-                temperature: float,
-                equilibrium_constants: Dict[str, float],
-                reaction_numbers: int,
-                method: Literal['minimize', 'least_squares'] = 'minimize',
-                **kwargs):
+    def opt_run(
+        self,
+        initial_mole: Dict[str, float | int],
+        initial_mole_fraction: Dict[str, float | int],
+        pressure: float,
+        temperature: float,
+        equilibrium_constants: Dict[str, float],
+        reaction_numbers: int,
+        method: Literal['minimize', 'least_squares'] = 'minimize',
+        **kwargs
+    ):
         """
         Start optimization process
 
@@ -1253,10 +1271,12 @@ class ReactionOptimizer:
             raise Exception(
                 f"Error in generating constraints collection: {str(e)}") from e
 
-    def constraints_collection_2(self,
-                                 nu,
-                                 n0,
-                                 include_mole_fraction_constraint=True):
+    def constraints_collection_2(
+        self,
+        nu,
+        n0,
+        include_mole_fraction_constraint=True
+    ):
         """
         Generate a collection of constraints for optimization.
 
@@ -1294,9 +1314,11 @@ class ReactionOptimizer:
             raise Exception(
                 f"Error in generating constraints collection: {str(e)}") from e
 
-    def equilibrium_results(self,
-                            initial_mole: Dict[str, float | int],
-                            EoR: list):
+    def equilibrium_results(
+        self,
+        initial_mole: Dict[str, float | int],
+        EoR: list
+    ):
         '''
         Calculate the equilibrium results based on the initial mole and extent of reaction.
 
@@ -1350,10 +1372,12 @@ class ReactionOptimizer:
             raise Exception(
                 f"Error in processing optimization results: {str(e)}") from e
 
-    def compute_bounds(self,
-                       nu: np.ndarray,
-                       n0: np.ndarray,
-                       **kwargs):
+    def compute_bounds(
+        self,
+        nu: np.ndarray,
+        n0: np.ndarray,
+        **kwargs
+    ):
         """
         Computes lower and upper bounds for each reaction extent ξ_j.
 
