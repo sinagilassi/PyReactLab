@@ -34,7 +34,7 @@ class ChemicalPotential:
     -----
     The fugacity of an ideal-mixture gas component is defined as:
 
-        f_i_ID = y_i * f_i_ID_PURE = y_i * P
+        f_i_ID = y_i * f_i_ID_PURE = y_i * P * φ_i = y_i * P
 
     The Fugacity of an ideal-solution liquid component is defined as:
 
@@ -51,6 +51,8 @@ class ChemicalPotential:
 
         μ_i_ID(T,P,y) = GiEnFo(T,P) + RT * ln(f_i_ID(T,P,y)/f_i(T,P))
         μ_i_ID(T,P,y) = GiEnFo(T,P) + RT * ln(y_i)
+
+        as: f_i_ID(T,P,y) = y_i * P, f_i(T,P) = P
 
     The chemical potential of non-ideal-gas component is defined as:
 
@@ -98,19 +100,21 @@ class ChemicalPotential:
     # solution
     _solution = 'ideal'
 
-    def __init__(self,
-                 datasource: Dict[str, Any],
-                 equationsource: Dict[str, Any],
-                 reaction_list: Dict[str, Reaction],
-                 component_dict: Dict[str, float | int],
-                 component_state_list: List[tuple],
-                 comp_list: List[Dict[str, float | int]],
-                 reaction_analysis: Dict,
-                 phase_stream: Dict[str, Any],
-                 phase_contents: Dict[str, Any],
-                 overall_reaction_analysis: Dict,
-                 overall_reaction_phase: str,
-                 **kwargs):
+    def __init__(
+        self,
+        datasource: Dict[str, Any],
+        equationsource: Dict[str, Any],
+        reaction_list: Dict[str, Reaction],
+        component_dict: Dict[str, float | int],
+        component_state_list: List[tuple],
+        comp_list: List[Dict[str, float | int]],
+        reaction_analysis: Dict,
+        phase_stream: Dict[str, Any],
+        phase_contents: Dict[str, Any],
+        overall_reaction_analysis: Dict,
+        overall_reaction_phase: str,
+        **kwargs
+    ):
         '''
         Initialize ReactionOptimizer class
 
@@ -126,10 +130,14 @@ class ChemicalPotential:
             component list [{key: value}, {key: value}, ...], such as [{CO2: -1.0, H2: -3.0, CH3OH: 1.0, H2O: 1.0}, ...]
         reaction_analysis : dict
             reaction analysis result
-        overall_reaction_analysis : dict
-            overall reaction analysis result
+        phase_stream : dict
+            phase stream dictionary
+        phase_contents : dict
+            phase contents dictionary
         overall_reaction_phase : str
             overall reaction phase, such as 'gas', 'liquid', 'solid', or 'aqueous'
+        overall_reaction_analysis : dict
+            overall reaction analysis result
         kwargs : dict
             additional parameters
         '''
@@ -381,7 +389,6 @@ class ChemicalPotential:
         ----------
         temperature : float
             Temperature in Kelvin [K] at which to calculate the chemical potential.
-
 
         Returns
         -------

@@ -870,7 +870,7 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
         """
         Conduct equilibrium deviation calculations for the reaction system.
 
-        This method calculates the actual Gibbs free energy of reaction (GiEn_rxn_T) at a given temperature and pressure, and component composition.
+        This method calculates `the actual Gibbs free energy of reaction` (GiEn_rxn_T) at a given temperature and pressure, and component composition.
 
         There are three cases as:
         - Case 1: `GiEn_rxn_T < 0`, the reaction is not at equilibrium and the reaction will proceed in the forward direction.

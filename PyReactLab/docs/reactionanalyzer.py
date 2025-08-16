@@ -611,8 +611,10 @@ class ReactionAnalyzer:
                         f"equation {component_names} does not have a unit for Cp integral.")
 
                 # TODO: FINALLY convert Cp equation to [J/mol.K]
-                _eq_Cp_integral_Cp__RT = pycuc.to(_eq_Cp_integral_Cp__RT,
-                                                  f"{unit_} => J/mol.K")
+                _eq_Cp_integral_Cp__RT = pycuc.to(
+                    _eq_Cp_integral_Cp__RT,
+                    f"{unit_} => J/mol.K"
+                )
 
             # check
             if not _eq_Cp_integral_Cp__RT:
