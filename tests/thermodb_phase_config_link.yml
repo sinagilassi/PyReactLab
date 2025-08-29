@@ -10,9 +10,13 @@ CO2-g:
     Pc: Pc
     Tc: Tc
     AcFa: AcFa
-    dHf_IG: EnFo
-    dGf_IG: GiEnFo
-
+    dHf_IG: EnFo_IG
+    dGf_IG: GiEnFo_IG
+    dHf_LIQ: EnFo_LIQ
+    dGf_LIQ: GiEnFo_LIQ
+    boiling-temperature: Tb
+    melting-temperature: Tm
+    sublimation-temperature: Ts
   EQUATIONS:
     vapor-pressure: VaPr
     heat-capacity: Cp

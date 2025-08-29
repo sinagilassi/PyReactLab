@@ -49,6 +49,14 @@ TEMPERATURE_REF_K = 298.15
 DATASOURCE = "datasource"
 EQUATIONSOURCE = "equationsource"
 
+# NOTE: properties
+# boiling temperature
+BOILING_TEMPERATURE = "Tb"
+# melting temperature
+MELTING_TEMPERATURE = "Tm"
+# sublimation temperature
+SUBLIMATION_TEMPERATURE = "Ts"
+
 # NOTE: set symbols
 # enthalpy of formation ideal gas
 EnFo_IG = "EnFo_IG"

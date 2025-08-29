@@ -34,12 +34,13 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
     # overall reaction phase
     overall_reaction_phase = None
 
-    def __init__(self,
-                 system_name: str,
-                 reactions: List[Dict[str, Any]],
-                 model_source: Dict[str, Any],
-                 **kwargs
-                 ):
+    def __init__(
+        self,
+        system_name: str,
+        reactions: List[Dict[str, Any]],
+        model_source: Dict[str, Any],
+        **kwargs
+    ):
         self.__system_name = system_name
         self.__reactions = reactions
 
@@ -176,8 +177,13 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             # ? comp_list: list of dict of component stoichiometry
             # ? comp_coeff: list of list of component stoichiometry
             # ? component_state_list: list of component name and state
-            (component_list, component_dict, comp_list,
-             comp_coeff, component_state_list) = res_1
+            (
+                component_list,
+                component_dict,
+                comp_list,
+                comp_coeff,
+                component_state_list
+            ) = res_1
 
             # set stoichiometry transpose
             comp_coeff_t = np.array(comp_coeff).T

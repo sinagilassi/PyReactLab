@@ -36,6 +36,8 @@ classifiers = [
 ]
 dependencies = [
     "pycuc>=2.1.0",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
     "pythermodb>=1.11.12",
     "pythermomodels>=1.4.8",
     "pyyaml>=6.0.2",
