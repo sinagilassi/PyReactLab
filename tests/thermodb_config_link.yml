@@ -12,7 +12,6 @@ CO2-g:
     AcFa: AcFa
     dHf_IG: EnFo
     dGf_IG: GiEnFo
-
   EQUATIONS:
     vapor-pressure: VaPr
     heat-capacity: Cp

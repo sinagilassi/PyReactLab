@@ -7,9 +7,9 @@
 
 ALL:
   DATA:
-    Pc: Pc
-    Tc: Tc
-    AcFa: AcFa
+    critical-pressure: Pc
+    critical-temperature: Tc
+    acentric-factor: AcFa
     enthalpy-of-formation-ideal-gas: EnFo_IG
     gibbs-energy-of-formation-ideal-gas: GiEnFo_IG
     enthalpy-of-formation-liquid: EnFo_LIQ
