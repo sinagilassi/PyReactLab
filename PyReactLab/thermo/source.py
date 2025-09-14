@@ -2,6 +2,11 @@
 import logging
 from typing import List, Dict, Optional, Any
 import pycuc
+from pyThermoDB.core import (
+    TableData,
+    TableEquation,
+    TableMatrixData
+)
 # local
 from ..configs import DATASOURCE, EQUATIONSOURCE
 
@@ -93,7 +98,7 @@ class ThermoSource:
         self,
         component_name: str,
         prop_name: str
-    ) -> Dict:
+    ) -> Dict[str, TableEquation]:
         '''
         Extracts the equilibrium property from the model source.
 
@@ -106,7 +111,7 @@ class ThermoSource:
 
         Returns
         -------
-        dict | None
+        dict[str, TableEquation]
             The extracted property.
         '''
         try:
@@ -318,6 +323,16 @@ class ThermoSource:
             _eq = None
             # select equation [?]
             _eq = self.eq_extractor(component, prop_name)
+
+            # check
+            if _eq is None:
+                raise ValueError(
+                    f"Equation for property '{prop_name}' not found for component '{component}'.")
+
+            # check type
+            if not isinstance(_eq, TableEquation):
+                raise ValueError(
+                    f"Equation for property '{prop_name}' for component '{component}' is not a valid TableEquation instance.")
 
             # NOTE: args
             _args = _eq.args
