@@ -76,10 +76,10 @@ def create_rxn(
 
 
 def create_gas_rxn(
-        system_name: str,
-        reactions: List[Dict[str, str]],
-        model_source: Dict[str, Any],
-        **kwargs
+    system_name: str,
+    reactions: List[Dict[str, str]],
+    model_source: Dict[str, Any],
+    **kwargs
 ) -> ReactionSystem:
     """
     Create a gaseous reaction system in that the compounds are in the gas phase and defined as `compound(g)`.
