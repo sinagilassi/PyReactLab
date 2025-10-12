@@ -38,9 +38,9 @@ dependencies = [
     "pycuc>=2.1.0",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
-    "pythermodb>=1.11.35",
-    "pythermodb-settings>=0.1.0",
-    "pythermomodels>=1.4.8",
+    "pythermodb>=1.11.42",
+    "pythermodb-settings>=0.1.9",
+    "pythermomodels>=1.5.0",
     "pyyaml>=6.0.2",
 ]
 
