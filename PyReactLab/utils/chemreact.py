@@ -1,11 +1,18 @@
 # import libs
+import logging
 import re
 from math import exp
 from typing import Dict, Any, List, Optional, Literal
 from ..configs import (
-    R_CONST_J__molK, DATASOURCE, EQUATIONSOURCE,
-    PRESSURE_REF_Pa, TEMPERATURE_REF_K
+    R_CONST_J__molK,
+    DATASOURCE,
+    EQUATIONSOURCE,
+    PRESSURE_REF_Pa,
+    TEMPERATURE_REF_K
 )
+
+# NOTE: logger
+logger = logging.getLogger(__name__)
 
 
 class ChemReactUtils:
@@ -205,10 +212,14 @@ class ChemReactUtils:
             carbon_count = {}
             for r in reactants:
                 carbon_count[r['molecule_state']] = self.count_carbon(
-                    r['molecule'], r['coefficient'])
+                    r['molecule'],
+                    r['coefficient']
+                )
             for p in products:
                 carbon_count[p['molecule_state']] = self.count_carbon(
-                    p['molecule'], p['coefficient'])
+                    p['molecule'],
+                    p['coefficient']
+                )
 
             # SECTION: reaction state
             reaction_state = {}
@@ -222,11 +233,13 @@ class ChemReactUtils:
             # NOTE: reaction phase
             # reaction
             reaction_phase = self.determine_reaction_phase(
-                reaction_state)
+                reaction_state
+            )
 
             # NOTE: unique states
             state_count = self.count_reaction_states(
-                reaction_state)
+                reaction_state
+            )
 
             # res
             res = {
@@ -245,7 +258,7 @@ class ChemReactUtils:
 
             return res
         except Exception as e:
-            raise Exception(f"Error analyzing reaction '{reaction}': {e}")
+            raise Exception(f"Error analyzing reaction: {e}")
 
     def phase_rule_analysis(self, phase_rule: Optional[str] = None) -> str:
         """
@@ -292,7 +305,8 @@ class ChemReactUtils:
 
     def analyze_overall_reactions(
             self,
-            reactions: List[Dict[str, str]]) -> Dict[str, List[str]]:
+            reactions: List[Dict[str, str]]
+    ) -> Dict[str, List[str]]:
         """
         Analyze a list of chemical reactions and classify species as consumed, produced, or intermediate.
 
@@ -445,8 +459,9 @@ class ChemReactUtils:
                 component_dict[item] = i
 
             # SECTION: Initialize the component list
-            comp_list = [{i: 0.0 for i in component_dict.keys()}
-                         for _ in range(len(reaction_res))]
+            comp_list = [
+                {i: 0.0 for i in component_dict.keys()} for _ in range(len(reaction_res))
+            ]
 
             # NOTE: Iterate over reactions and components
             for j, reaction in enumerate(reaction_res):
@@ -463,8 +478,9 @@ class ChemReactUtils:
                             comp_list[j][item] = float(product['coefficient'])
 
             # Convert comp_list to comp_matrix
-            comp_coeff = [[comp_list[j][item] for item in component_dict.keys()]
-                          for j in range(len(reaction_res))]
+            comp_coeff = [
+                [comp_list[j][item] for item in component_dict.keys()] for j in range(len(reaction_res))
+            ]
 
             # res
             return component_list, component_dict, comp_list, comp_coeff
@@ -505,17 +521,23 @@ class ChemReactUtils:
                     component_list.append(reactant['molecule_state'])
                     # add molecule and molecule state
                     component_state_list.append(
-                        (reactant['molecule'],
-                         reactant['state'],
-                         reactant['molecule_state']))
+                        (
+                            reactant['molecule'],
+                            reactant['state'],
+                            reactant['molecule_state']
+                        )
+                    )
                 # products
                 for product in reaction_res[item]['products']:
                     component_list.append(product['molecule_state'])
                     # add molecule and molecule state
                     component_state_list.append(
-                        (product['molecule'],
-                         product['state'],
-                         product['molecule_state']))
+                        (
+                            product['molecule'],
+                            product['state'],
+                            product['molecule_state']
+                        )
+                    )
 
             # remove duplicate
             component_list = list(set(component_list))
@@ -530,8 +552,9 @@ class ChemReactUtils:
                 component_dict[item] = i
 
             # SECTION: Initialize the component list
-            comp_list = [{i: 0.0 for i in component_dict.keys()}
-                         for _ in range(len(reaction_res))]
+            comp_list = [
+                {i: 0.0 for i in component_dict.keys()} for _ in range(len(reaction_res))
+            ]
 
             # NOTE: Iterate over reactions and components
             for j, reaction in enumerate(reaction_res):
@@ -548,8 +571,9 @@ class ChemReactUtils:
                             comp_list[j][item] = float(product['coefficient'])
 
             # Convert comp_list to comp_matrix
-            comp_coeff = [[comp_list[j][item] for item in component_dict.keys()]
-                          for j in range(len(reaction_res))]
+            comp_coeff = [
+                [comp_list[j][item] for item in component_dict.keys()] for j in range(len(reaction_res))
+            ]
 
             # res
             return (

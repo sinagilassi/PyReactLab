@@ -69,7 +69,10 @@ thub1.add_thermodb('H2O-g', H2O)
 thub1.add_thermodb('CH3OH-g', CH3OH)
 
 # NOTE: add thermodb rule
-thermodb_config_file = os.path.join(current_dir, 'thermodb_config_link.yml')
+thermodb_config_file = os.path.join(
+    current_dir,
+    'thermodb_config_link.yml'
+)
 
 # all components
 thub1.config_thermodb_rule(thermodb_config_file)
@@ -97,21 +100,29 @@ reaction_system = prl.create_gas_rxn(
     model_source=model_source
 )
 
+# =======================================
 # SECTION: REACTION SYSTEM PROPERTIES
-
+# =======================================
+# NOTE: equilibrium constant
 # Keq at T
 res_ = reaction_system.reaction_equilibrium_constant(
     'Methanol Formation by CO2-Hydrogenation',
     [300.0, "K"],
     message="K_eq at 300 K",
 )
-print(f'K_eq: {res_}')
+print('K_eq:')
+print(res_)
+
 # NOTE: select reaction
 R1: Reaction = reaction_system.select_reaction(
-    'Methanol Formation by CO2-Hydrogenation')
-R2: Reaction = reaction_system.select_reaction('Reverse-Water-Gas-Shift')
+    'Methanol Formation by CO2-Hydrogenation'
+)
+R2: Reaction = reaction_system.select_reaction(
+    'Reverse-Water-Gas-Shift'
+)
 R3: Reaction = reaction_system.select_reaction(
-    'Methanol Formation by CO-Hydrogenation')
+    'Methanol Formation by CO-Hydrogenation'
+)
 
 # NOTE: equilibrium constant
 # at std

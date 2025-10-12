@@ -17,7 +17,7 @@ class GasReactionSystem(ReactionSystem):
         model_source: Dict[str, Any]
     ):
         """
-        Initialize the GasReactionSystem class.
+        GasReactionSystem class for creating a gaseous reaction system in that the compounds are in the gas phase and defined as `compound(g)` in the reaction expression.
 
         Parameters
         ----------

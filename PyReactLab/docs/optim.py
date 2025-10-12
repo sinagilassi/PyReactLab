@@ -1,4 +1,5 @@
 # import packages/modules
+import logging
 from typing import (
     Dict,
     List,
@@ -21,6 +22,9 @@ from ..configs import (
     EOS_MODELS,
     ACTIVITY_MODELS
 )
+
+# NOTE: logger
+logger = logging.getLogger(__name__)
 
 
 class ReactionOptimizer:
@@ -526,7 +530,8 @@ class ReactionOptimizer:
                 # NOTE: calculate fugacity
                 res_ = self._cal_fugacity_coefficient_gaseous_mixture(
                     model_name=eos_model,  # type: ignore
-                    model_input=model_input)
+                    model_input=model_input
+                )
                 # update
                 fugacity_coeff = {**res_}
 

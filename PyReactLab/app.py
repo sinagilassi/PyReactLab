@@ -1,5 +1,5 @@
 # import libs
-from typing import List, Dict, Any, Literal, Optional
+from typing import List, Dict, Any
 # local
 from .docs import (
     ReactionSystem,
@@ -64,13 +64,15 @@ def create_rxn(
         if model_source:
             if not model_source_checker(model_source):
                 raise ValueError(
-                    f"Invalid model source, must contain {DATASOURCE} and {EQUATIONSOURCE}.")
+                    f"Invalid model source, must contain {DATASOURCE} and {EQUATIONSOURCE}."
+                )
 
         # NOTE: create reaction system object
         return ReactionSystem(
-            system_name,
-            reactions,
-            model_source)
+            system_name=system_name,
+            reactions=reactions,
+            model_source=model_source
+        )
     except Exception as e:
         raise Exception(f"Error creating reaction system: {e}") from e
 
@@ -123,13 +125,15 @@ def create_gas_rxn(
         if model_source:
             if not model_source_checker(model_source):
                 raise ValueError(
-                    f"Invalid model source, must contain {DATASOURCE} and {EQUATIONSOURCE}.")
+                    f"Invalid model source, must contain {DATASOURCE} and {EQUATIONSOURCE}."
+                )
 
         # NOTE: create reaction system object
         return GasReactionSystem(
-            system_name,
-            reactions,
-            model_source)
+            system_name=system_name,
+            reactions=reactions,
+            model_source=model_source
+        )
     except Exception as e:
         raise Exception(f"Error creating reaction system: {e}") from e
 
@@ -141,7 +145,7 @@ def create_liquid_rxn(
         **kwargs
 ) -> ReactionSystem:
     """
-    Create a liquid reaction system in that the compounds are in liquid phase and defined as `compound(l)`.
+    Create a liquid reaction system in that the compounds are in liquid phase and defined as `compound(l)` in the reaction expression.
 
     Parameters
     ----------
@@ -182,12 +186,14 @@ def create_liquid_rxn(
         if model_source:
             if not model_source_checker(model_source):
                 raise ValueError(
-                    f"Invalid model source, must contain {DATASOURCE} and {EQUATIONSOURCE}.")
+                    f"Invalid model source, must contain {DATASOURCE} and {EQUATIONSOURCE}."
+                )
 
         # NOTE: create reaction system object
         return LiquidReactionSystem(
-            system_name,
-            reactions,
-            model_source)
+            system_name=system_name,
+            reactions=reactions,
+            model_source=model_source
+        )
     except Exception as e:
         raise Exception(f"Error creating reaction system: {e}") from e

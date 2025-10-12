@@ -1,4 +1,5 @@
 # import libs
+import logging
 from typing import List, Dict, Any, Literal, Optional
 import pycuc
 # local
@@ -14,6 +15,9 @@ from ..configs import (
     GIBBS_FREE_ENERGY_OF_REACTION_T, ENTHALPY_OF_REACTION_T,
     GIBBS_FREE_ENERGY_OF_REACTION_T_SYMBOL, ENTHALPY_OF_REACTION_T_SYMBOL,
 )
+
+# NOTE: logger
+logger = logging.getLogger(__name__)
 
 
 class Reaction():

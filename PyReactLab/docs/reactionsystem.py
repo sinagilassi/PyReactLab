@@ -1,4 +1,5 @@
 # import libs
+import logging
 import numpy as np
 from typing import Dict, Any, List, Literal, Optional
 import pycuc
@@ -14,8 +15,12 @@ from ..utils import (
     ChemReactUtils,
     Temperature,
     Pressure,
-    OperatingConditions,)
+    OperatingConditions,
+)
 from .chemicalpotential import ChemicalPotential
+
+# NOTE: logger
+logger = logging.getLogger(__name__)
 
 
 class ReactionSystem(ThermoLinkDB, ReferenceManager):
@@ -136,10 +141,11 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             for item in self.reactions:
                 # NOTE: create reaction
                 r_ = Reaction(
-                    self.datasource,
-                    self.equationsource,
-                    item,
-                    phase_rule=self.phase_rule,)
+                    datasource=self.datasource,
+                    equationsource=self.equationsource,
+                    reaction=item,
+                    phase_rule=self.phase_rule,
+                )
 
                 # NOTE: analyze reaction
                 _res = r_.reaction_analysis_result

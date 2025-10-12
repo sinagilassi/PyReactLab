@@ -1,8 +1,12 @@
 # Liquid Reactions
 # import libs
+import logging
 from typing import List, Dict, Any
 # local
 from .reactionsystem import ReactionSystem
+
+# NOTE: logger
+logger = logging.getLogger(__name__)
 
 
 class LiquidReactionSystem(ReactionSystem):

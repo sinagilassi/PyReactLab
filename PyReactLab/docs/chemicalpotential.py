@@ -1,10 +1,12 @@
 # import libs
+import logging
 import numpy as np
 from typing import (
     Literal,
     Dict,
     Any,
-    List)
+    List
+)
 from math import log
 # local
 # local
@@ -24,6 +26,9 @@ from ..utils import (
     Pressure,
     OperatingConditions,
 )
+
+# NOTE: logger
+logger = logging.getLogger(__name__)
 
 
 class ChemicalPotential:
