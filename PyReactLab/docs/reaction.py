@@ -23,11 +23,13 @@ class Reaction():
     # variables
     reaction_analysis_result = {}
 
-    def __init__(self,
-                 datasource,
-                 equationsource,
-                 reaction,
-                 **kwargs):
+    def __init__(
+        self,
+        datasource,
+        equationsource,
+        reaction,
+        **kwargs
+    ):
         '''
         Initialize the reaction object.
 
