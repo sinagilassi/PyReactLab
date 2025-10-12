@@ -114,10 +114,12 @@ class ReactionAnalyzer:
 
             # If the property is not found in any of the components, return None
             raise ValueError(
-                f"Property '{property_name}' not found for component '{component_ids}'.")
+                f"Property '{property_name}' not found for component '{component_ids}'."
+            )
         except KeyError as e:
             raise KeyError(
-                f"Property '{property_name}' not found for component '{component_id}'.") from e
+                f"Property '{property_name}' not found for component."
+            ) from e
 
     def equationsource_extractor(
         self,
@@ -137,7 +139,10 @@ class ReactionAnalyzer:
         equation_name : str
             The name of the equation to extract.
 
-
+        Returns
+        -------
+        dict
+            The extracted equation data.
         """
         try:
             # looping through the component_id
@@ -156,7 +161,7 @@ class ReactionAnalyzer:
                 f"Equation '{equation_name}' not found for component '{component_ids}'.")
         except KeyError as e:
             raise KeyError(
-                f"Equation '{equation_name}' not found for component '{component_id}'.") from e
+                f"Equation '{equation_name}' not found for component.") from e
 
     def energy_analysis(
         self,
@@ -252,7 +257,8 @@ class ReactionAnalyzer:
             # check
             if _dGf_IG is None or _dGf_IG == 'None':
                 raise ValueError(
-                    f"Failed to extract Gibbs energy of formation for {molecule_}.")
+                    f"Failed to extract Gibbs energy of formation for {molecule_}."
+                )
 
             # ? add
             data_src[GIBBS_FREE_ENERGY_OF_FORMATION_STD]['reactants'][molecule_state_] = {

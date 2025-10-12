@@ -1,6 +1,10 @@
 # TOOLS
 # import libs
+import logging
 from ..configs import DATASOURCE, EQUATIONSOURCE
+
+# NOTE: logger
+logger = logging.getLogger(__name__)
 
 
 def model_source_checker(model_source: dict) -> bool:
@@ -21,16 +25,24 @@ def model_source_checker(model_source: dict) -> bool:
     """
     try:
         # Check if the model source is a dictionary and contains the required keys
-        if (not isinstance(model_source, dict) or
-                not all(key in model_source for key in [DATASOURCE, EQUATIONSOURCE])):
+        if (
+            not isinstance(model_source, dict) or
+            not all(key in model_source for key in [
+                DATASOURCE, EQUATIONSOURCE]
+            )
+        ):
             raise ValueError(
-                f"Model source must be a dictionary with {DATASOURCE} and {EQUATIONSOURCE} keys.")
+                f"Model source must be a dictionary with {DATASOURCE} and {EQUATIONSOURCE} keys."
+            )
 
         # Check if the datasource and equationsource are dictionaries
-        if (not isinstance(model_source[DATASOURCE], dict) or
-                not isinstance(model_source[EQUATIONSOURCE], dict)):
+        if (
+            not isinstance(model_source[DATASOURCE], dict) or
+            not isinstance(model_source[EQUATIONSOURCE], dict)
+        ):
             raise ValueError(
-                f"'{DATASOURCE}' and '{EQUATIONSOURCE}' must be dictionaries.")
+                f"'{DATASOURCE}' and '{EQUATIONSOURCE}' must be dictionaries."
+            )
 
         return True
     except Exception as e:
