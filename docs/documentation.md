@@ -1,6 +1,6 @@
 # 📚 Documentation
 
-## ⚛️ Reaction Syatem
+## ⚛️ Reaction System
 
 ::: PyReactLab.docs.reactionsystem
 
