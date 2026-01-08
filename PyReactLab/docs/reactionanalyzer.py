@@ -915,7 +915,7 @@ class ReactionAnalyzer:
         **kwargs
     ):
         '''
-        Calculates change in Gibbs free energy of a reaction at different temperatures using the Van't Hoff equation.
+        Calculates equilibrium constant of a reaction at different temperatures using Van't Hoff equation.
 
         Parameters
         ----------
