@@ -7,8 +7,11 @@
 ![Python Version](https://img.shields.io/pypi/pyversions/PyReactLab.svg)
 ![License](https://img.shields.io/pypi/l/PyReactLab)
 ![Read the Docs](https://img.shields.io/readthedocs/PyReactLab)
+[![Download on the App Store](https://img.shields.io/badge/Download_on_the_App_Store-0D0D0D?logo=apple&logoColor=white)](https://apps.apple.com/ca/app/mozithermocalc/id6759209992)
 
 PyReactLab is an open-source Python package designed to analyze chemical reactions and theoretically assess their thermodynamic feasibility. It provides a robust and flexible framework for studying chemical reaction systems, making it an ideal tool for researchers, engineers, and scientists working in chemistry, chemical engineering, and related disciplines.
+
+Calculations can also be done on your mobile with the MoziThermoCalc iOS app: [Download on the App Store](https://apps.apple.com/ca/app/mozithermocalc/id6759209992).
 
 ## 🔎 Introduction
 
