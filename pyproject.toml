@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "PyReactLab"
-version = "0.3.1"
+version = "0.3.2"
 description = "PyReactLab is an open-source Python package designed to analyze chemical reactions and theoretically assess their thermodynamic feasibility."
 requires-python = ">=3.11"
 license = "MIT"
@@ -38,10 +38,10 @@ dependencies = [
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
     "pyyaml>=6.0.2",
-    "pythermodb",
-    "pythermodb-settings",
-    "pythermomodels",
-    "pycuc",
+    "pythermodb>=1.12.2",
+    "pythermodb-settings>=0.2.10",
+    "pythermomodels>=1.6.0",
+    "pycuc>=2.6.0",
 ]
 
 [project.optional-dependencies]
