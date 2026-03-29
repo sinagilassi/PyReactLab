@@ -19,11 +19,13 @@ class ThermoModels:
         """
         pass
 
-    def NRTL(self,
-             components: List[str],
-             z_i_comp: Dict[str, float],
-             temperature: float,
-             **kwargs):
+    def NRTL(
+        self,
+            components: List[str],
+            z_i_comp: Dict[str, float],
+            temperature: float,
+            **kwargs
+    ) -> Dict[str, Any]:
         '''
         NRTL activity model for calculating activity coefficients.
 
@@ -206,11 +208,13 @@ class ThermoModels:
         except Exception as e:
             raise Exception(f"Failed to calculate NRTL activity: {e}") from e
 
-    def UNIQUAC(self,
-                components: List[str],
-                z_i_comp: Dict[str, float],
-                temperature: float,
-                **kwargs):
+    def UNIQUAC(
+        self,
+            components: List[str],
+            z_i_comp: Dict[str, float],
+            temperature: float,
+            **kwargs
+    ) -> Dict[str, Any]:
         '''
         UNIQUAC activity model for calculating activity coefficients.
 

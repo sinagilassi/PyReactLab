@@ -89,6 +89,7 @@ class ReactionOptimizer:
             overall reaction analysis result
         kwargs : dict
             additional parameters
+            - threshold: threshold for optimization, default 1e-8
         '''
         # datasource
         self.datasource = datasource
@@ -364,7 +365,7 @@ class ReactionOptimizer:
             EoR = x
             # define threshold
             for i, item in enumerate(EoR):
-                EoR[i] = max(self.threshold, item)
+                EoR[i] = float(item)
 
             # SECTION: mole balance
             # NOTE: initial mole
@@ -621,15 +622,16 @@ class ReactionOptimizer:
                                 term_ = 1
                         else:
                             raise ValueError(
-                                "Invalid liquid mixture mode. Must be 'ideal' or 'non-ideal'.")
-
+                                "Invalid liquid mixture mode. Must be 'ideal' or 'non-ideal'."
+                            )
                     elif state_ == "s":
                         # set
                         # solid always has the activity of 1
                         term_ = 1
                     else:
                         raise ValueError(
-                            "Invalid phase. Must be 'gas' or 'liquid'.")
+                            "Invalid phase. Must be 'gas' or 'liquid'."
+                        )
 
                     # update denominator
                     denominator *= (term_)**coefficient_
@@ -1359,14 +1361,20 @@ class ReactionOptimizer:
             EoR_vector = np.sum(comp_value_matrix, axis=0)
 
             # build final X
-            Xfs, Xfs_vector, Nf, Nfs_vector = self.build_final_X(
+            (
+                Xfs,
+                Xfs_vector,
+                Nf,
+                Nfs_vector
+            ) = self.build_final_X(
                 N0s_vector, EoR_vector
             )
 
             # Nfs
             Nfs = {}
             for key, value in self.component_dict.items():
-                Nfs[key] = Nfs_vector[value]
+                # set
+                Nfs[key] = Nfs_vector[int(value)]
 
             # set float
             Nfs = {k: float(v) for k, v in Nfs.items()}

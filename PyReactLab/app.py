@@ -1,15 +1,15 @@
 # import libs
-from typing import List, Dict, Any
+from typing import List, Dict
 # local
+from pythermodb_settings.models import ComponentKey
+from pyThermoLinkDB.models import ModelSource
+from pyThermoLinkDB.thermo import Source
+# locals
 from .docs import (
-    ReactionSystem,
-    Reaction,
-    ReferenceManager,
     GasReactionSystem,
     LiquidReactionSystem
 )
-from .utils import model_source_checker
-from .configs import DATASOURCE, EQUATIONSOURCE
+from .core import ReactionSystem, ReferenceManager
 
 
 def summary() -> str:
@@ -25,7 +25,8 @@ def summary() -> str:
 def create_rxn(
         system_name: str,
         reactions: List[Dict[str, str]],
-        model_source: Dict[str, Any],
+        model_source: ModelSource,
+        component_key: ComponentKey = "Formula-State",
         **kwargs
 ) -> ReactionSystem:
     """
@@ -39,8 +40,10 @@ def create_rxn(
         List of reactions in the system must be in the form of a list of dictionaries as the following keys:
         - 'reaction': str, the reaction equation.
         - 'name': str, the name of the reaction.
-    model_source : dict
-        Inputs for the reaction system which
+    model_source : ModelSource
+        Inputs for the reaction system which contains the data source and equation source for the components in the reaction system.
+    component_key : ComponentKey, optional
+        The key to identify the components in the reaction system, by default "Formula-State".
     kwargs : dict
         Additional keyword arguments.
 
@@ -55,23 +58,18 @@ def create_rxn(
         if not isinstance(system_name, str):
             raise ValueError("System name must be a string.")
 
-        # check if system inputs are valid
-        if not isinstance(model_source, dict):
-            raise ValueError("System inputs must be a dictionary.")
-
-        # system source must contain datasource and equationsource
-        # NOTE: check if model_source is valid
-        if model_source:
-            if not model_source_checker(model_source):
-                raise ValueError(
-                    f"Invalid model source, must contain {DATASOURCE} and {EQUATIONSOURCE}."
-                )
+        # NOTE: create source
+        Source_ = Source(
+            model_source=model_source,
+            component_key=component_key
+        )
 
         # NOTE: create reaction system object
         return ReactionSystem(
             system_name=system_name,
             reactions=reactions,
-            model_source=model_source
+            model_source=model_source,
+            source=Source_
         )
     except Exception as e:
         raise Exception(f"Error creating reaction system: {e}") from e
@@ -80,7 +78,8 @@ def create_rxn(
 def create_gas_rxn(
     system_name: str,
     reactions: List[Dict[str, str]],
-    model_source: Dict[str, Any],
+    model_source: ModelSource,
+    component_key: ComponentKey = "Formula-State",
     **kwargs
 ) -> ReactionSystem:
     """
@@ -94,8 +93,10 @@ def create_gas_rxn(
         List of reactions in the system must be in the form of a list of dictionaries as the following keys:
         - 'reaction': str, the reaction equation.
         - 'name': str, the name of the reaction.
-    model_source : dict
+    model_source : ModelSource
         Inputs for the reaction system which
+    component_key : ComponentKey, optional
+        The key to identify the components in the reaction system, by default "Formula-State".
     kwargs : dict
         Additional keyword arguments.
 
@@ -116,23 +117,18 @@ def create_gas_rxn(
         if not isinstance(system_name, str):
             raise ValueError("System name must be a string.")
 
-        # check if system inputs are valid
-        if not isinstance(model_source, dict):
-            raise ValueError("System inputs must be a dictionary.")
-
-        # system source must contain datasource and equationsource
-        # NOTE: check if model_source is valid
-        if model_source:
-            if not model_source_checker(model_source):
-                raise ValueError(
-                    f"Invalid model source, must contain {DATASOURCE} and {EQUATIONSOURCE}."
-                )
+        # NOTE: create source
+        Source_ = Source(
+            model_source=model_source,
+            component_key=component_key
+        )
 
         # NOTE: create reaction system object
         return GasReactionSystem(
             system_name=system_name,
             reactions=reactions,
-            model_source=model_source
+            model_source=model_source,
+            source=Source_
         )
     except Exception as e:
         raise Exception(f"Error creating reaction system: {e}") from e
@@ -141,7 +137,8 @@ def create_gas_rxn(
 def create_liquid_rxn(
         system_name: str,
         reactions: List[Dict[str, str]],
-        model_source: Dict[str, Any],
+        model_source: ModelSource,
+        component_key: ComponentKey = "Formula-State",
         **kwargs
 ) -> ReactionSystem:
     """
@@ -155,8 +152,10 @@ def create_liquid_rxn(
         List of reactions in the system must be in the form of a list of dictionaries as the following keys:
         - 'reaction': str, the reaction equation.
         - 'name': str, the name of the reaction.
-    model_source : dict
+    model_source : ModelSource
         Inputs for the reaction system which
+    component_key : ComponentKey, optional
+        The key to identify the components in the reaction system, by default "Formula-State".
     kwargs : dict
         Additional keyword arguments.
 
@@ -177,23 +176,18 @@ def create_liquid_rxn(
         if not isinstance(system_name, str):
             raise ValueError("System name must be a string.")
 
-        # check if system inputs are valid
-        if not isinstance(model_source, dict):
-            raise ValueError("System inputs must be a dictionary.")
-
-        # system source must contain datasource and equationsource
-        # NOTE: check if model_source is valid
-        if model_source:
-            if not model_source_checker(model_source):
-                raise ValueError(
-                    f"Invalid model source, must contain {DATASOURCE} and {EQUATIONSOURCE}."
-                )
+        # NOTE: create source
+        Source_ = Source(
+            model_source=model_source,
+            component_key=component_key
+        )
 
         # NOTE: create reaction system object
         return LiquidReactionSystem(
             system_name=system_name,
             reactions=reactions,
-            model_source=model_source
+            model_source=model_source,
+            source=Source_
         )
     except Exception as e:
         raise Exception(f"Error creating reaction system: {e}") from e

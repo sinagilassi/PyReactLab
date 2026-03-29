@@ -2,7 +2,8 @@ from .configs import (
     __version__, __description__, __author__, __email__, __license__
 )
 from .app import create_rxn, summary, create_gas_rxn, create_liquid_rxn
-from .docs import ReactionSystem, Reaction
+from .core import ReactionSystem
+from .reaction import Reaction
 
 
 __all__ = [

@@ -19,8 +19,8 @@ from ..configs import (
     EOS_MODELS,
     ACTIVITY_MODELS
 )
-from .reaction import Reaction
-from .reactionanalyzer import ReactionAnalyzer
+from ..reaction.reaction import Reaction
+from ..reaction.reactionanalyzer import ReactionAnalyzer
 from ..utils import (
     Temperature,
     Pressure,

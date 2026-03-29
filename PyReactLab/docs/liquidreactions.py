@@ -2,8 +2,10 @@
 # import libs
 import logging
 from typing import List, Dict, Any
+from pyThermoLinkDB.models import ModelSource
+from pyThermoLinkDB.thermo import Source
 # local
-from .reactionsystem import ReactionSystem
+from ..core.reactionsystem import ReactionSystem
 
 # NOTE: logger
 logger = logging.getLogger(__name__)
@@ -18,7 +20,8 @@ class LiquidReactionSystem(ReactionSystem):
         self,
         system_name: str,
         reactions: List[Dict[str, Any]],
-        model_source: Dict[str, Any]
+        model_source: ModelSource,
+        source: Source,
     ):
         """
         Initialize the LiquidReactionSystem class.
@@ -31,14 +34,18 @@ class LiquidReactionSystem(ReactionSystem):
             List of reactions in the system must be in the form of a list of dictionaries as the following keys
             - 'reaction': str, the reaction equation.
             - 'name': str, the name of the reaction.
-        model_source : dict
-            Inputs for the reaction system which
+        model_source : ModelSource
+            Inputs for the reaction system which contains the data source and equation source for the components in the reaction system.
+        source : Source
+            The source object containing the model source and component key for the reaction system.
         """
         super().__init__(
             system_name=system_name,
             reactions=reactions,
             model_source=model_source,
-            phase_rule=self._phase)
+            source=source,
+            phase_rule=self._phase
+        )
 
         # NOTE: check phase
         self.checking_phase()

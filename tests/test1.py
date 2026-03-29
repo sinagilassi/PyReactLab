@@ -4,7 +4,17 @@ from PyReactLab import Reaction
 from rich import print
 import pyThermoDB as ptdb
 import pyThermoLinkDB as ptdblink
+from pyThermoLinkDB.models import ModelSource
 import os
+# locals
+from tests.msource import (
+    CO2,
+    H2,
+    CO,
+    H2O,
+    CH3OH,
+    model_source
+)
 
 # NOTE: check version
 print(prl.__version__)
@@ -42,50 +52,50 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 data_folder = os.path.join(current_dir, 'data')
 
 # load thermodb
-CO2 = ptdb.load_thermodb(f'{data_folder}/carbon dioxide-1.pkl')
-H2 = ptdb.load_thermodb(f'{data_folder}/hydrogen-1.pkl')
-CO = ptdb.load_thermodb(f'{data_folder}/carbon monoxide-1.pkl')
-H2O = ptdb.load_thermodb(f'{data_folder}/water-1.pkl')
-CH3OH = ptdb.load_thermodb(f'{data_folder}/methanol-1.pkl')
+# CO2 = ptdb.load_thermodb(f'{data_folder}/carbon dioxide-1.pkl')
+# H2 = ptdb.load_thermodb(f'{data_folder}/hydrogen-1.pkl')
+# CO = ptdb.load_thermodb(f'{data_folder}/carbon monoxide-1.pkl')
+# H2O = ptdb.load_thermodb(f'{data_folder}/water-1.pkl')
+# CH3OH = ptdb.load_thermodb(f'{data_folder}/methanol-1.pkl')
 # log
-print(f'CO2: {CO2.check()}')
-print(f'H2: {H2.check()}')
-print(f'CO: {CO.check()}')
-print(f'H2O: {H2O.check()}')
-print(f'CH3OH: {CH3OH.check()}')
+# print(f'CO2: {CO2.check()}')
+# print(f'H2: {H2.check()}')
+# print(f'CO: {CO.check()}')
+# print(f'H2O: {H2O.check()}')
+# print(f'CH3OH: {CH3OH.check()}')
 
 # =======================================
 # SECTION: THERMODB LINK CONFIGURATION
 # =======================================
-# init thermodb hub
-thub1 = ptdblink.init()
-print(type(thub1))
+# # init thermodb hub
+# thub1 = ptdblink.init()
+# print(type(thub1))
 
-# add component thermodb
-thub1.add_thermodb('CO2-g', CO2)
-thub1.add_thermodb('H2-g', H2)
-thub1.add_thermodb('CO-g', CO)
-thub1.add_thermodb('H2O-g', H2O)
-thub1.add_thermodb('CH3OH-g', CH3OH)
+# # add component thermodb
+# thub1.add_thermodb('CO2-g', CO2)
+# thub1.add_thermodb('H2-g', H2)
+# thub1.add_thermodb('CO-g', CO)
+# thub1.add_thermodb('H2O-g', H2O)
+# thub1.add_thermodb('CH3OH-g', CH3OH)
 
-# NOTE: add thermodb rule
-thermodb_config_file = os.path.join(current_dir, 'thermodb_config_link.yml')
+# # NOTE: add thermodb rule
+# thermodb_config_file = os.path.join(current_dir, 'thermodb_config_link.yml')
 
-# all components
-thub1.config_thermodb_rule(thermodb_config_file)
+# # all components
+# thub1.config_thermodb_rule(thermodb_config_file)
 
-# build datasource & equationsource
-datasource, equationsource = thub1.build()
+# # build datasource & equationsource
+# datasource, equationsource = thub1.build()
+
+# NOTE: model source
+# model_source = {
+#     "datasource": datasource,
+#     "equationsource": equationsource
+# }
 
 # =======================================
 # SECTION: REACTION SYSTEM
 # =======================================
-# NOTE: model source
-model_source = {
-    "datasource": datasource,
-    "equationsource": equationsource
-}
-
 # NOTE: summary
 summary = prl.summary()
 print(summary)

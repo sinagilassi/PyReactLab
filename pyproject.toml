@@ -35,13 +35,15 @@ classifiers = [
     "Operating System :: Microsoft :: Windows"
 ]
 dependencies = [
-    "pydantic>=2.11.7",
+    "pydantic>=2.12.0",
     "pydantic-settings>=2.10.1",
-    "pyyaml>=6.0.2",
+    "pyyaml>=6.0.3",
     "pythermodb>=1.12.2",
+    "pythermolinkdb>=1.4.13",
     "pythermodb-settings>=0.2.10",
     "pythermomodels>=1.6.0",
     "pycuc>=2.6.0",
+    "pyreactlab-core>=0.1.6",
 ]
 
 [project.optional-dependencies]

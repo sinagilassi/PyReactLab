@@ -5,12 +5,13 @@ from typing import Dict, Any, List, Literal, Optional
 import pycuc
 import time  # Import the time module
 import pyThermoModels as ptm
+from pyThermoLinkDB.models import ModelSource
+from pyThermoLinkDB.thermo import Source
 # local
-from .reaction import Reaction
-from .thermolinkdb import ThermoLinkDB
+from ..reaction.reaction import Reaction
 from .refmanager import ReferenceManager
-from .reactionanalyzer import ReactionAnalyzer
-from .optim import ReactionOptimizer
+from ..reaction.reactionanalyzer import ReactionAnalyzer
+from ..docs.optim import ReactionOptimizer
 from ..utils import (
     ChemReactUtils,
     Temperature,
@@ -23,7 +24,7 @@ from .chemicalpotential import ChemicalPotential
 logger = logging.getLogger(__name__)
 
 
-class ReactionSystem(ThermoLinkDB, ReferenceManager):
+class ReactionSystem(ReferenceManager):
     """Class to represent a system of chemical reactions."""
 
     # NOTE: class variables
@@ -43,14 +44,22 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
         self,
         system_name: str,
         reactions: List[Dict[str, Any]],
-        model_source: Dict[str, Any],
+        model_source: ModelSource,
+        source: Source,
         **kwargs
     ):
         self.__system_name = system_name
         self.__reactions = reactions
 
         # NOTE: model source
-        self.__model_source = model_source
+        self.model_source = {
+            'datasource': model_source.data_source,
+            'equationsource': model_source.equation_source
+        }
+
+        # set datasource and equationsource for the reaction system
+        self.datasource = model_source.data_source
+        self.equationsource = model_source.equation_source
 
         # NOTE: kwargs
         # phase rule
@@ -58,7 +67,6 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
 
         # NOTE: init class
         ReferenceManager.__init__(self)
-        ThermoLinkDB.__init__(self, model_source)
 
         # SECTION: init class
         self.ReactionAnalyzer_ = ReactionAnalyzer()
@@ -167,7 +175,8 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             #     self.reactions)
             # NOTE: version 2
             res_0 = ChemReactUtils_.analyze_overall_reactions_v2(
-                reaction_res)
+                reaction_res
+            )
 
             # SECTION: set component
             # NOTE: version 1
@@ -175,7 +184,8 @@ class ReactionSystem(ThermoLinkDB, ReferenceManager):
             #     reaction_res)
             # NOTE: version 2
             res_1 = ChemReactUtils_.define_component_id_v2(
-                reaction_res)
+                reaction_res
+            )
 
             # extract
             # ? component_list: list of components

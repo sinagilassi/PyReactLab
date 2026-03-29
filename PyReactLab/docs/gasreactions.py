@@ -1,8 +1,10 @@
 # Gas Reactions
 # import libs
 from typing import List, Dict, Any
+from pyThermoLinkDB.models import ModelSource
+from pyThermoLinkDB.thermo import Source
 # local
-from .reactionsystem import ReactionSystem
+from ..core.reactionsystem import ReactionSystem
 
 
 class GasReactionSystem(ReactionSystem):
@@ -14,7 +16,8 @@ class GasReactionSystem(ReactionSystem):
         self,
         system_name: str,
         reactions: List[Dict[str, Any]],
-        model_source: Dict[str, Any]
+        model_source: ModelSource,
+        source: Source,
     ):
         """
         GasReactionSystem class for creating a gaseous reaction system in that the compounds are in the gas phase and defined as `compound(g)` in the reaction expression.
@@ -27,13 +30,16 @@ class GasReactionSystem(ReactionSystem):
             List of reactions in the system must be in the form of a list of dictionaries as the following keys
             - 'reaction': str, the reaction equation.
             - 'name': str, the name of the reaction.
-        model_source : dict
+        model_source : ModelSource
             Inputs for the reaction system which
+        source : Source
+            The source object containing the model source and component key for the reaction system.
         """
         super().__init__(
             system_name=system_name,
             reactions=reactions,
             model_source=model_source,
+            source=source,
             phase_rule=self._phase
         )
 
