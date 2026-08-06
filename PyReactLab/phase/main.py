@@ -1,8 +1,8 @@
 # import libs
 from typing import List, Dict, Any
 import logging
+from pythermodb_settings.models import Temperature, Pressure, Component
 # local
-from ..models import Temperature, Pressure, Component
 from .phasecontroller import PhaseController
 
 

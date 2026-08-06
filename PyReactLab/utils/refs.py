@@ -1,23 +1,9 @@
 # create reference
 from typing import Dict, TypedDict
-
-
-class Temperature(TypedDict):
-    """
-    Temperature reference for the reaction system.
-    """
-
-    value: float  # Temperature in Kelvin
-    unit: str  # Unit of temperature, e.g., 'K', 'C'
-
-
-class Pressure(TypedDict):
-    """
-    Pressure reference for the reaction system.
-    """
-
-    value: float  # Pressure in Pascal
-    unit: str  # Unit of pressure, e.g., 'Pa', 'bar', 'atm'
+from pythermodb_settings.models import (
+    Temperature,
+    Pressure,
+)
 
 
 class OperatingConditions(TypedDict):

@@ -3,7 +3,7 @@ import logging
 from typing import Dict, Any, List
 import pycuc
 # local
-from ..models import Temperature, Pressure, Component
+from pythermodb_settings.models import Temperature, Pressure, Component
 from ..configs import (
     DATASOURCE,
     EQUATIONSOURCE,
@@ -159,9 +159,15 @@ class PhaseController:
             # SECTION: current temperature and pressure
             # unit conversion
             # kelvin [K]
-            T = pycuc.to(temperature.value, f"{temperature.unit} => K")
+            T = pycuc.to(
+                temperature.value,
+                f"{temperature.unit} => K"
+            )
             # pascal [Pa]
-            P = pycuc.to(pressure.value, f"{pressure.unit} => Pa")
+            P = pycuc.to(
+                pressure.value,
+                f"{pressure.unit} => Pa"
+            )
 
             # SECTION: check phase
             if T >= Tb.value:

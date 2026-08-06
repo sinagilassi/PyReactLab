@@ -8,7 +8,7 @@ from typing import (
     List
 )
 from math import log
-# local
+# from pythermodb_settings.models import Temperature, Pressure
 # local
 from ..configs import (
     R_CONST_J__molK,
