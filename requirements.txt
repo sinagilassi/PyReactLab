@@ -1,8 +1,0 @@
-numpy
-scipy
-PyCUC
-PyYAML
-PyThermoDB
-PyThermoModels
-PyThermoLinkDB
-matplotlib
