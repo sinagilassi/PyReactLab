@@ -7,8 +7,9 @@ import time  # Import the time module
 import pyThermoModels as ptm
 from pyThermoLinkDB.models import ModelSource
 from pyThermoLinkDB.thermo import Source
+from pyreactlab_core.models.reaction import Reaction
 # local
-from ..reaction.reaction import Reaction
+from ..reaction.reaction_core import ReactionCore
 from .refmanager import ReferenceManager
 from ..reaction.reactionanalyzer import ReactionAnalyzer
 from ..docs.optim import ReactionOptimizer
@@ -32,7 +33,7 @@ class ReactionSystem(ReferenceManager):
     __reactions = None
     # primary analysis result
     __reaction_analysis = None
-    __reaction_list: Dict[str, Reaction] = {}
+    __reaction_list: Dict[str, ReactionCore] = {}
 
     # reference plugin
     _references = {}
@@ -43,7 +44,7 @@ class ReactionSystem(ReferenceManager):
     def __init__(
         self,
         system_name: str,
-        reactions: List[Dict[str, Any]],
+        reactions: List[Reaction],
         model_source: ModelSource,
         source: Source,
         **kwargs
@@ -87,7 +88,7 @@ class ReactionSystem(ReferenceManager):
         return self.__system_name
 
     @property
-    def reactions(self) -> List[Dict[str, str]]:
+    def reactions(self) -> List[Reaction]:
         """Get the reactions of the reaction system."""
         # check
         if self.__reactions is None:
@@ -95,14 +96,14 @@ class ReactionSystem(ReferenceManager):
         return self.__reactions
 
     @property
-    def reaction_list(self) -> Dict[str, Reaction]:
+    def reaction_list(self) -> Dict[str, ReactionCore]:
         """Get the list of reactions (object) in the reaction system."""
         # check
         if not self.__reaction_list:
             raise ValueError("No reactions found in the reaction system.")
         return self.__reaction_list
 
-    def select_reaction(self, reaction_name: str) -> Reaction:
+    def select_reaction(self, reaction_name: str) -> ReactionCore:
         """
         Select a reaction from the reaction system.
 
@@ -148,7 +149,7 @@ class ReactionSystem(ReferenceManager):
             # looping through each reaction
             for item in self.reactions:
                 # NOTE: create reaction
-                r_ = Reaction(
+                r_ = ReactionCore(
                     datasource=self.datasource,
                     equationsource=self.equationsource,
                     reaction=item,
@@ -159,7 +160,7 @@ class ReactionSystem(ReferenceManager):
                 _res = r_.reaction_analysis_result
 
                 # name
-                name: str = item['name']
+                name = item.name
                 # update
                 reaction_res[name] = _res
                 # set
@@ -420,7 +421,7 @@ class ReactionSystem(ReferenceManager):
             reaction = self.__reaction_list[reaction_name]
 
             # check if reaction is valid
-            if not isinstance(reaction, Reaction):
+            if not isinstance(reaction, ReactionCore):
                 raise ValueError(
                     f"Invalid reaction object for {reaction_name}")
 
@@ -722,7 +723,7 @@ class ReactionSystem(ReferenceManager):
             # loop through each reaction
             for key, r in self.__reaction_list.items():
                 # NOTE: check if reaction is valid
-                if not isinstance(r, Reaction):
+                if not isinstance(r, ReactionCore):
                     raise ValueError(
                         f"Invalid reaction object for {key}")
 

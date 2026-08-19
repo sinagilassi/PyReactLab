@@ -1,6 +1,6 @@
 # reaction
-from .reaction import Reaction
+from .reaction_core import ReactionCore
 
 __all__ = [
-    'Reaction',
+    'ReactionCore',
 ]

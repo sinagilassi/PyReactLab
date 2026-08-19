@@ -19,7 +19,7 @@ from ..configs import (
     EOS_MODELS,
     ACTIVITY_MODELS
 )
-from ..reaction.reaction import Reaction
+from ..reaction.reaction_core import ReactionCore
 from ..reaction.reactionanalyzer import ReactionAnalyzer
 from ..utils import (
     Temperature,
@@ -109,7 +109,7 @@ class ChemicalPotential:
         self,
         datasource: Dict[str, Any],
         equationsource: Dict[str, Any],
-        reaction_list: Dict[str, Reaction],
+        reaction_list: Dict[str, ReactionCore],
         component_dict: Dict[str, float | int],
         component_state_list: List[tuple],
         comp_list: List[Dict[str, float | int]],

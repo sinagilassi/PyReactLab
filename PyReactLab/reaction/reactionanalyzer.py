@@ -15,6 +15,7 @@ from pyThermoDB import (
 )
 import pycuc
 from scipy import integrate
+from pyreactlab_core.models.reaction import Reaction
 #  local
 from ..configs import (
     R_CONST_J__molK,
@@ -167,7 +168,7 @@ class ReactionAnalyzer:
         self,
         datasource: Dict[str, Any],
         equationsource: Dict[str, Any],
-        reaction: Dict[str, Any],
+        reaction: Reaction,
         **kwargs
     ):
         '''
@@ -218,9 +219,9 @@ class ReactionAnalyzer:
 
         # reaction results
         # reaction name
-        reaction_name = reaction['name']
+        reaction_name = reaction.name
         # reaction
-        reaction_body = reaction['reaction']
+        reaction_body = reaction.reaction
 
         # update
         data_src = {

@@ -2,26 +2,35 @@
 import logging
 from typing import List, Dict, Any, Literal, Optional
 import pycuc
+from pyreactlab_core.models.reaction import Reaction
 # local
 from .reactionanalyzer import ReactionAnalyzer
 from ..utils import ChemReactUtils
 from ..configs import (
-    EQUILIBRIUM_CONSTANT_STD, EQUILIBRIUM_CONSTANT_STD_SYMBOL,
-    EQUILIBRIUM_CONSTANT, EQUILIBRIUM_CONSTANT_SYMBOL,
-    GIBBS_FREE_ENERGY_OF_REACTION_STD, GIBBS_FREE_ENERGY_OF_REACTION_STD_SYMBOL,
-    ENTHALPY_OF_REACTION_STD, ENTHALPY_OF_REACTION_STD_SYMBOL,
-    GIBBS_FREE_ENERGY_OF_FORMATION_STD, GIBBS_FREE_ENERGY_OF_FORMATION_STD_SYMBOL,
-    ENTHALPY_OF_FORMATION_STD, ENTHALPY_OF_FORMATION_STD_SYMBOL,
-    GIBBS_FREE_ENERGY_OF_REACTION_T, ENTHALPY_OF_REACTION_T,
-    GIBBS_FREE_ENERGY_OF_REACTION_T_SYMBOL, ENTHALPY_OF_REACTION_T_SYMBOL,
+    EQUILIBRIUM_CONSTANT_STD,
+    EQUILIBRIUM_CONSTANT_STD_SYMBOL,
+    EQUILIBRIUM_CONSTANT,
+    EQUILIBRIUM_CONSTANT_SYMBOL,
+    GIBBS_FREE_ENERGY_OF_REACTION_STD,
+    GIBBS_FREE_ENERGY_OF_REACTION_STD_SYMBOL,
+    ENTHALPY_OF_REACTION_STD,
+    ENTHALPY_OF_REACTION_STD_SYMBOL,
+    GIBBS_FREE_ENERGY_OF_FORMATION_STD,
+    GIBBS_FREE_ENERGY_OF_FORMATION_STD_SYMBOL,
+    ENTHALPY_OF_FORMATION_STD,
+    ENTHALPY_OF_FORMATION_STD_SYMBOL,
+    GIBBS_FREE_ENERGY_OF_REACTION_T,
+    ENTHALPY_OF_REACTION_T,
+    GIBBS_FREE_ENERGY_OF_REACTION_T_SYMBOL,
+    ENTHALPY_OF_REACTION_T_SYMBOL,
 )
 
 # NOTE: logger
 logger = logging.getLogger(__name__)
 
 
-class Reaction():
-    """Class to represent a chemical reaction."""
+class ReactionCore():
+    """Class to represent a chemical reaction core."""
     # NOTE: variables
 
     # variables
@@ -29,9 +38,9 @@ class Reaction():
 
     def __init__(
         self,
-        datasource,
-        equationsource,
-        reaction,
+        datasource: dict,
+        equationsource: dict,
+        reaction: Reaction,
         **kwargs
     ):
         '''
@@ -76,12 +85,12 @@ class Reaction():
             reaction_res = {}
 
             # NOTE: name
-            name = self.reaction['name']
+            name = self.reaction.name
             # update
             reaction_res['name'] = name
 
             # NOTE: reaction
-            reaction = self.reaction['reaction']
+            reaction = self.reaction.reaction
             # update
             reaction_res['reaction'] = reaction
 
@@ -93,33 +102,34 @@ class Reaction():
             # 'reaction_coefficient': reaction_coefficient,
             # 'carbon_count': carbon_count
             # 'reaction_state': reaction_state,
-            _res_0 = self.ChemReactUtils_.analyze_reaction(
-                self.reaction,
-                phase_rule=self.phase_rule,
-            )
-
-            # NOTE: energy analysis
-            # set input
-            _input = {**reaction_res, **_res_0}
-
-            energy_analysis = self.ReactionAnalyzer_.energy_analysis(
-                self.datasource,
-                self.equationsource,
-                _input
-            )
 
             # update
             self.reaction_name = name
             self.reaction_equation = reaction
-            self.reactants = _res_0['reactants']
-            self.reactants_names = _res_0['reactants_names']
-            self.products = _res_0['products']
-            self.products_names = _res_0['products_names']
-            self.reaction_coefficient = _res_0['reaction_coefficient']
-            self.carbon_count = _res_0['carbon_count']
-            self.reaction_state = _res_0['reaction_state']
-            self.reaction_phase = _res_0['reaction_phase']
-            self.state_count = _res_0['state_count']
+            self.reactants = self.reaction.reactants  # _res_0['reactants']
+            # _res_0['reactants_names']
+            self.reactants_names = self.reaction.reactants_names
+            self.products = self.reaction.products  # _res_0['products']
+            # _res_0['products_names']
+            self.products_names = self.reaction.products_names
+            # _res_0['reaction_coefficient']
+            self.reaction_coefficient = self.reaction.reaction_coefficients
+            # _res_0['carbon_count']
+            self.carbon_count = self.reaction.carbon_count
+            # _res_0['reaction_state']
+            self.reaction_state = self.reaction.reaction_state
+            # _res_0['reaction_phase']
+            self.reaction_phase = self.reaction.reaction_phase
+            # _res_0['state_count']
+            self.state_count = self.reaction.state_count
+
+            # SECTION: energy analysis
+            energy_analysis = self.ReactionAnalyzer_.energy_analysis(
+                self.datasource,
+                self.equationsource,
+                self.reaction
+            )
+
             self.energy_analysis = energy_analysis
             # extract
             self.gibbs_free_energy_of_formation_std = energy_analysis[
@@ -140,14 +150,14 @@ class Reaction():
             self.reaction_analysis_result: Dict[str, Any] = {
                 'name': name,
                 'reaction': reaction,
-                'reactants': _res_0['reactants'],
-                'reactants_names': _res_0['reactants_names'],
-                'products': _res_0['products'],
-                'products_names': _res_0['products_names'],
-                'reaction_coefficient': _res_0['reaction_coefficient'],
-                'carbon_count': _res_0['carbon_count'],
-                'reaction_state': _res_0['reaction_state'],
-                'state_count': _res_0['state_count'],
+                'reactants': self.reactants,
+                'reactants_names': self.reactants_names,
+                'products': self.products,
+                'products_names': self.products_names,
+                'reaction_coefficient': self.reaction_coefficient,
+                'carbon_count': self.carbon_count,
+                'reaction_state': self.reaction_state,
+                'state_count': self.state_count,
                 'energy_analysis': energy_analysis
             }
 
