@@ -3,7 +3,7 @@ from .configs import (
 )
 from .app import create_rxn, summary, create_gas_rxn, create_liquid_rxn
 from .core import ReactionSystem
-from .reaction import Reaction
+from .reaction import ReactionCore
 
 
 __all__ = [
@@ -14,7 +14,7 @@ __all__ = [
     "__license__",
     "create_rxn",
     "ReactionSystem",
-    "Reaction",
+    "ReactionCore",
     "summary",
     "create_gas_rxn",
     "create_liquid_rxn",
