@@ -3,9 +3,13 @@ import logging
 from typing import List, Dict, Any, Literal, Optional
 import pycuc
 from pyreactlab_core.models.reaction import Reaction
+from pyThermoLinkDB.thermo import Source
 # local
 from .reactionanalyzer import ReactionAnalyzer
 from ..utils import ChemReactUtils
+from ..models import (
+    Temperature,
+)
 from ..configs import (
     EQUILIBRIUM_CONSTANT_STD,
     EQUILIBRIUM_CONSTANT_STD_SYMBOL,
@@ -38,8 +42,7 @@ class ReactionCore():
 
     def __init__(
         self,
-        datasource: dict,
-        equationsource: dict,
+        source: Source,
         reaction: Reaction,
         **kwargs
     ):
@@ -48,10 +51,8 @@ class ReactionCore():
 
         Parameters
         ----------
-        datasource : dict
-            Dictionary containing the thermodynamic data for the reaction.
-        equationsource : dict
-            Dictionary containing the equations for the reaction.
+        source : Source
+            Source object containing the data source and equation source.
         reaction : dict
             Reaction object in the form of a dictionary with the following keys:
             - 'name': str, the name of the reaction.
@@ -59,14 +60,20 @@ class ReactionCore():
         **kwargs : dict
             Additional keyword arguments.
         '''
-        # set
-        self.datasource = datasource
-        self.equationsource = equationsource
+        # NOTE: set
+        self.source = source
         self.reaction = reaction
+
+        # >>> data source
+        self.datasource = source.datasource
+        # >> equation source
+        self.equationsource = source.equationsource
 
         # NOTE: init
         self.ChemReactUtils_ = ChemReactUtils()
-        self.ReactionAnalyzer_ = ReactionAnalyzer()
+        self.ReactionAnalyzer_ = ReactionAnalyzer(
+            source=self.source,
+        )
 
         # NOTE: kwargs
         # phase rule
@@ -75,6 +82,7 @@ class ReactionCore():
         # NOTE: reaction analyzer
         self._reaction_analyzer()
 
+    # SECTION: reaction analyzer
     def _reaction_analyzer(self) -> None:
         """
         Execute the primary analysis for the reaction system.
@@ -165,6 +173,7 @@ class ReactionCore():
             raise Exception(
                 f"Error in ReactionSystem.go(): {str(e)}") from e
 
+    # SECTION: reaction system properties
     def check_state(self):
         """
         Check the state of the reaction system whether it is a liquid, gas, aqueous, or solid or a combination of them.
@@ -189,9 +198,10 @@ class ReactionCore():
             raise Exception(
                 f"Failing in finding the reaction state: {str(e)}") from e
 
+    # SECTION: reaction system properties
     def cal_equilibrium_constant(
         self,
-        temperature: List[float | str],
+        temperature: Temperature,
         method: Literal[
             "van't Hoff", "shortcut van't Hoff"
         ] = "van't Hoff"
@@ -201,8 +211,8 @@ class ReactionCore():
 
         Parameters
         ----------
-        temperature : list[float, str]
-            Temperature in any unit, e.g. [300.0, "K"], It is automatically converted to Kelvin.
+        temperature : Temperature
+            Temperature object containing the value and unit of temperature.
         method : str, optional
             Method to calculate the equilibrium constant. The default is "van't Hoff".
             Options are "van't Hoff" or "shortcut van't Hoff".
@@ -213,23 +223,14 @@ class ReactionCore():
             Dictionary containing the equilibrium constant at the given temperature.
         """
         try:
-            # NOTE: check if T
-            # check if T is a list
-            if not isinstance(temperature, list):
-                raise ValueError("Temperature must be a list.")
-
-            # check if T is a number
-            if not isinstance(temperature[0], (int, float)):
-                raise ValueError("Temperature must be a number.")
-
-            # check if T is a string
-            if not isinstance(temperature[1], str):
-                raise ValueError("Temperature unit must be a string.")
+            # NOTE: temperature set
+            T_value = temperature.value
+            T_unit = temperature.unit
 
             # NOTE: convert temperature to Kelvin
             # set unit
-            unit_set = f"{temperature[1]} => K"
-            T = pycuc.to(temperature[0], unit_set)
+            unit_set = f"{T_unit} => K"
+            T = pycuc.to(T_value, unit_set)
 
             # SECTION: calculate equilibrium constant at a given temperature
             # check if method is valid
@@ -274,9 +275,10 @@ class ReactionCore():
             raise Exception(
                 f"Error in ReactionSystem.Keq_T(): {str(e)}") from e
 
+    # SECTION: reaction system properties
     def cal_reaction_energy(
         self,
-        temperature: List[float | str]
+        temperature: Temperature
     ) -> Dict[str, Any]:
         """
         Calculate the reaction energy at a given temperature which consists of the following:
@@ -285,8 +287,8 @@ class ReactionCore():
 
         Parameters
         ----------
-        temperature : list[float, str]
-            Temperature in any unit, e.g. [300.0, "K"], It is automatically converted to Kelvin.
+        temperature : Temperature
+            Temperature object containing the value and unit of temperature.
 
         Returns
         -------
@@ -294,23 +296,14 @@ class ReactionCore():
             Dictionary containing the reaction energy at the given temperature.
         """
         try:
-            # NOTE: check if T
-            # check if T is a list
-            if not isinstance(temperature, list):
-                raise ValueError("Temperature must be a list.")
-
-            # check if T is a number
-            if not isinstance(temperature[0], (int, float)):
-                raise ValueError("Temperature must be a number.")
-
-            # check if T is a string
-            if not isinstance(temperature[1], str):
-                raise ValueError("Temperature unit must be a string.")
+            # NOTE: temperature set
+            T_value = temperature.value
+            T_unit = temperature.unit
 
             # NOTE: convert temperature to Kelvin
             # set unit
-            unit_set = f"{temperature[1]} => K"
-            T = pycuc.to(temperature[0], unit_set)
+            unit_set = f"{T_unit} => K"
+            T = pycuc.to(T_value, unit_set)
 
             # SECTION: calculate reaction energy at a given temperature
             res = self.ReactionAnalyzer_.reaction_energy_analysis(
