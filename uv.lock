@@ -786,6 +786,7 @@ source = { editable = "." }
 dependencies = [
     { name = "pycuc" },
     { name = "pyreactlab-core" },
+    { name = "pythermocalcdb" },
     { name = "pythermodb" },
     { name = "pythermodb-settings" },
     { name = "pythermolinkdb" },
@@ -802,6 +803,7 @@ requires-dist = [
     { name = "matplotlib", marker = "extra == 'plotting'" },
     { name = "pycuc" },
     { name = "pyreactlab-core" },
+    { name = "pythermocalcdb", specifier = ">=0.12.1" },
     { name = "pythermodb" },
     { name = "pythermodb-settings" },
     { name = "pythermolinkdb" },
@@ -822,6 +824,25 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f2/be/fbfd6a793e7fbf30d1acef2afebd4046c6702f611fb48e51d4a3fde06dfb/pyreactlab_core-0.1.7.tar.gz", hash = "sha256:828566dbf58c21083b820adb2ea4a877df32f30ee05e06904d399804b20491a2", size = 28433, upload-time = "2026-04-24T22:59:24.725Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a0/e2/dbe2c14b26a4ba6aca9d1d39a4e4f4af9207938f925309111e47b46f6748/pyreactlab_core-0.1.7-py3-none-any.whl", hash = "sha256:b8694bdad5d4a00620fd8af014e01e057f130d69ca38468e1b2eb83ab74cc384", size = 29520, upload-time = "2026-04-24T22:59:23.538Z" },
+]
+
+[[package]]
+name = "pythermocalcdb"
+version = "0.12.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pycuc" },
+    { name = "pydantic" },
+    { name = "pyreactlab-core" },
+    { name = "pythermodb" },
+    { name = "pythermodb-settings" },
+    { name = "pythermolinkdb" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d8/dd/3deae7d94b1a4fd9f17245237b64ec0757fa352e4f01c1af536d6f5d9dad/pythermocalcdb-0.12.1.tar.gz", hash = "sha256:4ac907c19488155d3679b4354eb9ce4537adc33d03332e0a4cf27601cd56f5ee", size = 68952, upload-time = "2026-07-04T01:09:52.402Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e4/7a/8596e251cf98f3749ceff8b052b2fda1b70c1812a34fda2f3dbe25ab785d/pythermocalcdb-0.12.1-py3-none-any.whl", hash = "sha256:b148fe5f30c8994783e0a69b97665ee0f5acc60487f2bcf0906aa0fdb918d188", size = 84670, upload-time = "2026-07-04T01:09:51.425Z" },
 ]
 
 [[package]]
