@@ -1,5 +1,5 @@
 # import libs
-import PyReactLab as prl
+import pyreactlab as prl
 
 # NOTE: check version
 print(prl.__version__)
