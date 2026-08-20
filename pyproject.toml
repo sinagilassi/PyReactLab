@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "PyReactLab"
+name = "pyreactlab"
 version = "0.3.2"
 description = "PyReactLab is an open-source Python package designed to analyze chemical reactions and theoretically assess their thermodynamic feasibility."
 requires-python = ">=3.11"
@@ -44,9 +44,6 @@ dependencies = [
     "pythermocalcdb>=0.12.1",
 ]
 
-[project.optional-dependencies]
-plotting = ["matplotlib"]
-
 [project.urls]
 "Homepage" = "https://github.com/sinagilassi/PyReactLab"
 "Bug Tracker" = "https://github.com/sinagilassi/PyReactLab/issues"
@@ -55,8 +52,8 @@ plotting = ["matplotlib"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["PyReactLab*"]
+include = ["pyreactlab*"]
 exclude = ["tests*", "examples*","docs*",".vscode*"]
 
 [tool.setuptools.package-data]
-"PyReactLab" = ["config/*.yml", "config/*.csv", "data/*.csv", "data/*.yml", "plugin/*.yml", "plugin/*.csv"]
+"pyreactlab" = ["config/*.yml", "config/*.csv", "data/*.csv", "data/*.yml", "plugin/*.yml", "plugin/*.csv"]
