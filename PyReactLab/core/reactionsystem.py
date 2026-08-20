@@ -69,8 +69,10 @@ class ReactionSystem(ReferenceManager):
         # NOTE: init class
         ReferenceManager.__init__(self)
 
-        # SECTION: init class
-        self.ReactionAnalyzer_ = ReactionAnalyzer()
+        # SECTION: init reaction analyzer
+        self.ReactionAnalyzer_ = ReactionAnalyzer(
+            source=source
+        )
 
         # SECTION: load reference
         # reference plugin (default app params)
