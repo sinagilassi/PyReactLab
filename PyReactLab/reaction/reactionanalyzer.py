@@ -9,13 +9,12 @@ from typing import (
 from math import exp
 from pyThermoDB import (
     TableEquation,
-    TableMatrixEquation,
-    TableData,
-    TableMatrixData
 )
 import pycuc
 from scipy import integrate
 from pyreactlab_core.models.reaction import Reaction
+from pyThermoLinkDB.thermo import Source
+from pythermocalcdb.reactions import dH_rxn_STD, dG_rxn_STD, build_hsg_reaction
 #  local
 from ..configs import (
     R_CONST_J__molK,
@@ -64,106 +63,24 @@ class ReactionAnalyzer:
     # pressure [bar]
     __P_Ref = PRESSURE_REF_Pa/1e5
 
-    def __init__(self):
+    def __init__(
+            self,
+            source: Source
+    ):
         """
         Initialize the ReactionAnalyzer with a datasource and equationsource.
 
         Parameters
         ----------
-        datasource : dict
-            The datasource containing the thermodynamic data.
-        equationsource : dict
-            The equationsource containing the reaction equations.
+        reaction : Reaction
+            The reaction to be analyzed.
+        source : Source
+            The source containing the thermodynamic data and equations.
         """
-        # self.datasource = datasource
-        # self.equationsource = equationsource
+        # NOTE: set
+        self.source = source
 
-    def datasource_extractor(
-        self,
-        datasource: Dict[str, Any],
-        component_ids: List[str],
-        property_name: str
-    ):
-        """
-        Extract a specific property from the datasource for a given component.
-
-        Parameters
-        ----------
-        datasource : dict
-            The datasource containing the thermodynamic data.
-        component_ids : list[str]
-            The ID of the component to extract data for.
-        property_name : str
-            The name of the property to extract.
-
-        Returns
-        -------
-        dict
-            The extracted property data.
-        """
-        try:
-            # looping through the component_id
-            for component_id in component_ids:
-                # check if the component exists in the datasource
-                if component_id in datasource.keys():
-                    # component datasource
-                    component_datasource = datasource[component_id]
-                    # check if the property exists in the component datasource
-                    if property_name in component_datasource.keys():
-                        # Extract the property data from the datasource
-                        return datasource[component_id][property_name]
-
-            # If the property is not found in any of the components, return None
-            raise ValueError(
-                f"Property '{property_name}' not found for component '{component_ids}'."
-            )
-        except KeyError as e:
-            raise KeyError(
-                f"Property '{property_name}' not found for component."
-            ) from e
-
-    def equationsource_extractor(
-        self,
-        equationsource: Dict[str, Any],
-        component_ids: List[str],
-        equation_name: str
-    ):
-        """
-        Extract a specific equation name from the equationsource for a given component.
-
-        Parameters
-        ----------
-        equationsource : dict
-            The equationsource containing the reaction equations.
-        component_ids : List[str]
-            The ID of the component to extract data for.
-        equation_name : str
-            The name of the equation to extract.
-
-        Returns
-        -------
-        dict
-            The extracted equation data.
-        """
-        try:
-            # looping through the component_id
-            for component_id in component_ids:
-                # check if the component exists in the equationsource
-                if component_id in equationsource.keys():
-                    # component equationsource
-                    component_equationsource = equationsource[component_id]
-                    # check if the equation name exists in the component equationsource
-                    if equation_name in component_equationsource.keys():
-                        # Extract the equation data from the equationsource
-                        return equationsource[component_id][equation_name]
-
-            # If the equation name is not found in any of the components, return None
-            raise ValueError(
-                f"Equation '{equation_name}' not found for component '{component_ids}'.")
-        except KeyError as e:
-            raise KeyError(
-                f"Equation '{equation_name}' not found for component.") from e
-
+    # SECTION: energy analysis
     def energy_analysis(
         self,
         datasource: Dict[str, Any],
@@ -931,7 +848,6 @@ class ReactionAnalyzer:
         kwargs : dict
             Additional keyword arguments.
 
-
         Returns
         -------
         list
@@ -1101,8 +1017,9 @@ class ReactionAnalyzer:
                 "Total moles are zero, cannot calculate mole fraction.")
 
         # Calculate mole fraction
-        mole_fraction = {key: value / total_mole for key,
-                         value in initial_moles.items()}
+        mole_fraction = {
+            key: value / total_mole for key, value in initial_moles.items()
+        }
 
         return mole_fraction, total_mole
 
