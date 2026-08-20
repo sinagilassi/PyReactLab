@@ -3,6 +3,7 @@
 from typing import List, Dict, Any
 from pyThermoLinkDB.models import ModelSource
 from pyThermoLinkDB.thermo import Source
+from pyreactlab_core.models.reaction import Reaction
 # local
 from ..core.reactionsystem import ReactionSystem
 
@@ -15,7 +16,7 @@ class GasReactionSystem(ReactionSystem):
     def __init__(
         self,
         system_name: str,
-        reactions: List[Dict[str, Any]],
+        reactions: List[Reaction],
         model_source: ModelSource,
         source: Source,
     ):
@@ -26,10 +27,8 @@ class GasReactionSystem(ReactionSystem):
         ----------
         system_name : str
             Name of the reaction system.
-        reactions : list
-            List of reactions in the system must be in the form of a list of dictionaries as the following keys
-            - 'reaction': str, the reaction equation.
-            - 'name': str, the name of the reaction.
+        reactions : list[Reaction]
+            List of reactions in the system must be in the form of a list of Reaction objects.
         model_source : ModelSource
             Inputs for the reaction system which
         source : Source
