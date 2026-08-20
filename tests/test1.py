@@ -1,10 +1,11 @@
 # import libs
 import PyReactLab as prl
-from PyReactLab import Reaction
+from PyReactLab import ReactionCore
 from rich import print
 import pyThermoDB as ptdb
 import pyThermoLinkDB as ptdblink
 from pyThermoLinkDB.models import ModelSource
+from PyReactLab.models import Reaction
 import os
 # locals
 from tests.msource import (
@@ -48,50 +49,6 @@ reactions = [
 # =======================================
 # current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
-# data folder
-data_folder = os.path.join(current_dir, 'data')
-
-# load thermodb
-# CO2 = ptdb.load_thermodb(f'{data_folder}/carbon dioxide-1.pkl')
-# H2 = ptdb.load_thermodb(f'{data_folder}/hydrogen-1.pkl')
-# CO = ptdb.load_thermodb(f'{data_folder}/carbon monoxide-1.pkl')
-# H2O = ptdb.load_thermodb(f'{data_folder}/water-1.pkl')
-# CH3OH = ptdb.load_thermodb(f'{data_folder}/methanol-1.pkl')
-# log
-# print(f'CO2: {CO2.check()}')
-# print(f'H2: {H2.check()}')
-# print(f'CO: {CO.check()}')
-# print(f'H2O: {H2O.check()}')
-# print(f'CH3OH: {CH3OH.check()}')
-
-# =======================================
-# SECTION: THERMODB LINK CONFIGURATION
-# =======================================
-# # init thermodb hub
-# thub1 = ptdblink.init()
-# print(type(thub1))
-
-# # add component thermodb
-# thub1.add_thermodb('CO2-g', CO2)
-# thub1.add_thermodb('H2-g', H2)
-# thub1.add_thermodb('CO-g', CO)
-# thub1.add_thermodb('H2O-g', H2O)
-# thub1.add_thermodb('CH3OH-g', CH3OH)
-
-# # NOTE: add thermodb rule
-# thermodb_config_file = os.path.join(current_dir, 'thermodb_config_link.yml')
-
-# # all components
-# thub1.config_thermodb_rule(thermodb_config_file)
-
-# # build datasource & equationsource
-# datasource, equationsource = thub1.build()
-
-# NOTE: model source
-# model_source = {
-#     "datasource": datasource,
-#     "equationsource": equationsource
-# }
 
 # =======================================
 # SECTION: REACTION SYSTEM
@@ -117,10 +74,10 @@ res_ = reaction_system.reaction_equilibrium_constant(
 )
 print(f'K_eq: {res_}')
 # NOTE: select reaction
-R1: Reaction = reaction_system.select_reaction(
+R1: ReactionCore = reaction_system.select_reaction(
     'Methanol Formation by CO2-Hydrogenation')
-R2: Reaction = reaction_system.select_reaction('Reverse-Water-Gas-Shift')
-R3: Reaction = reaction_system.select_reaction(
+R2: ReactionCore = reaction_system.select_reaction('Reverse-Water-Gas-Shift')
+R3: ReactionCore = reaction_system.select_reaction(
     'Methanol Formation by CO-Hydrogenation')
 
 # NOTE: equilibrium constant
