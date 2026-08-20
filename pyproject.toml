@@ -41,6 +41,7 @@ dependencies = [
     "pythermodb-settings",
     "pythermomodels",
     "pyreactlab-core",
+    "pythermocalcdb>=0.12.1",
 ]
 
 [project.optional-dependencies]
