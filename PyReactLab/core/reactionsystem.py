@@ -9,16 +9,17 @@ from pyThermoLinkDB.models import ModelSource
 from pyThermoLinkDB.thermo import Source
 from pyreactlab_core.models.reaction import Reaction
 # local
+from ..models import (
+    Temperature,
+    Pressure,
+    OperatingConditions,
+    MoleFraction
+)
 from ..reaction.reaction_core import ReactionCore
 from .refmanager import ReferenceManager
 from ..reaction.reactionanalyzer import ReactionAnalyzer
 from ..docs.optim import ReactionOptimizer
-from ..utils import (
-    ChemReactUtils,
-    Temperature,
-    Pressure,
-    OperatingConditions,
-)
+from ..utils import ChemReactUtils
 from .chemicalpotential import ChemicalPotential
 
 # NOTE: logger
@@ -61,6 +62,9 @@ class ReactionSystem(ReferenceManager):
         # set datasource and equationsource for the reaction system
         self.datasource = model_source.data_source
         self.equationsource = model_source.equation_source
+
+        # source
+        self.source = source
 
         # NOTE: kwargs
         # phase rule
@@ -152,8 +156,7 @@ class ReactionSystem(ReferenceManager):
             for item in self.reactions:
                 # NOTE: create reaction
                 r_ = ReactionCore(
-                    datasource=self.datasource,
-                    equationsource=self.equationsource,
+                    source=self.source,
                     reaction=item,
                     phase_rule=self.phase_rule,
                 )
@@ -283,7 +286,7 @@ class ReactionSystem(ReferenceManager):
     def component_formation_energies(
         self,
         component_name: str,
-        temperature: List[float | str],
+        temperature: Temperature,
         res_format: Literal[
             'symbolic', 'names'
         ] = 'names',
@@ -296,33 +299,23 @@ class ReactionSystem(ReferenceManager):
         ----------
         component_name : str
             Name of the component such as 'H2O-l', 'CO2-g', etc.
-        temperature : list[float, str]
-            Temperature in any unit, e.g. [300.0, "K"], It is automatically converted to Kelvin.
+        temperature : Temperature
+            Temperature object containing the value and unit of temperature.
         res_format : str, optional
             Format of the result, by default 'names'.
         message : str, optional
             Optional message to display during the calculation, by default None.
 
-
+        Returns
+        -------
+        dict
+            Dictionary containing the enthalpy and gibbs free energy of formation for the component at the given temperature.
         '''
         try:
-            # NOTE: check if T
-            # check if T is a list
-            if not isinstance(temperature, list):
-                raise ValueError("Temperature must be a list.")
-
-            # check if T is a number
-            if not isinstance(temperature[0], (int, float)):
-                raise ValueError("Temperature must be a number.")
-
-            # check if T is a string
-            if not isinstance(temperature[1], str):
-                raise ValueError("Temperature unit must be a string.")
-
             # NOTE: convert temperature to Kelvin
             # get
-            T_value = temperature[0]
-            T_unit = temperature[1]
+            T_value = temperature.value
+            T_unit = temperature.unit
             # set unit
             unit_set = f"{T_unit} => K"
             T = pycuc.to(T_value, unit_set)
@@ -368,10 +361,11 @@ class ReactionSystem(ReferenceManager):
             raise Exception(
                 f"Error in ReactionSystem.calc_component_formation_energies(): {str(e)}") from e
 
+    # SECTION: equilibrium constant calculation
     def reaction_equilibrium_constant(
         self,
         reaction_name: str,
-        temperature: list[float | str],
+        temperature: Temperature,
         method: Literal[
             "van't Hoff", "shortcut van't Hoff"
         ] = "van't Hoff",
@@ -384,8 +378,8 @@ class ReactionSystem(ReferenceManager):
         ----------
         reaction_name : str
             Name of the reaction.
-        temperature : list
-            Temperature in the form of [value, unit], the unit is automatically converted to K.
+        temperature : Temperature
+
         method : str, optional
             Method to calculate the equilibrium constant, by default "van't Hoff".
             Options are "van't Hoff" or "shortcut van't Hoff".
@@ -399,21 +393,6 @@ class ReactionSystem(ReferenceManager):
             Equilibrium constant at the given temperature.
         """
         try:
-            # NOTE: check if temperature is valid
-            if not isinstance(temperature, list):
-                raise ValueError("Temperature must be a number.")
-
-            # check if temperature is valid
-            if len(temperature) != 2:
-                raise ValueError(
-                    "Temperature must be a list of length 2 following [value, unit].")
-
-            if not isinstance(temperature[0], (int, float)):
-                raise ValueError("Temperature must be a number.")
-
-            if not isinstance(temperature[1], str):
-                raise ValueError("Temperature unit must be a string.")
-
             # NOTE: check if reaction name is valid
             if reaction_name not in self.__reaction_list:
                 raise ValueError(f"Invalid reaction name: {reaction_name}")
@@ -429,7 +408,7 @@ class ReactionSystem(ReferenceManager):
 
             # NOTE: calculate equilibrium constant at the given temperature
             res = reaction.cal_equilibrium_constant(
-                temperature,
+                temperature=temperature,
                 method=method
             )
 
@@ -444,6 +423,7 @@ class ReactionSystem(ReferenceManager):
             raise Exception(
                 f"Error in ReactionSystem.equilibrium_constant_at_temperature(): {str(e)}") from e
 
+    # SECTION: equilibrium calculation
     def equilibrium(
         self,
         inputs: Dict[str, Any],
@@ -540,47 +520,25 @@ class ReactionSystem(ReferenceManager):
             # set
             temperature = inputs["temperature"]
             # check if temperature is valid
-            if not isinstance(temperature, list):
-                raise ValueError("Temperature must be a number.")
-
-            # check if temperature is valid
-            if len(temperature) != 2:
-                raise ValueError(
-                    "Temperature must be a list of length 2 following [value, unit].")
-
-            if not isinstance(temperature[0], (int, float)):
-                raise ValueError("Temperature must be a number.")
-
-            if not isinstance(temperature[1], str):
-                raise ValueError("Temperature unit must be a string.")
+            if not isinstance(temperature, Temperature):
+                logger.error("Temperature must be a Temperature object.")
 
             # ! convert to **K**
             # set unit
-            unit_set = f"{temperature[1]} => K"
-            temperature_K = pycuc.to(temperature[0], unit_set)
+            unit_set = f"{temperature.unit} => K"
+            temperature_K = pycuc.to(temperature.value, unit_set)
 
             # NOTE: check if pressure is valid
             # set
             pressure = inputs["pressure"]
             # check if pressure is valid
-            if not isinstance(pressure, list):
-                raise ValueError("Pressure must be a number.")
-
-            # check if pressure is valid
-            if len(pressure) != 2:
-                raise ValueError(
-                    "Pressure must be a list of length 2 following [value, unit].")
-
-            if not isinstance(pressure[0], (int, float)):
-                raise ValueError("Pressure must be a number.")
-
-            if not isinstance(pressure[1], str):
-                raise ValueError("Pressure unit must be a string.")
+            if not isinstance(pressure, Pressure):
+                logger.error("Pressure must be a Pressure object.")
 
             # ! convert to **bar**
             # set unit
-            unit_set = f"{pressure[1]} => bar"
-            pressure_bar = pycuc.to(pressure[0], unit_set)
+            unit_set = f"{pressure.unit} => bar"
+            pressure_bar = pycuc.to(pressure.value, unit_set)
 
             # NOTE: check if initial mole fraction is valid
             # set
