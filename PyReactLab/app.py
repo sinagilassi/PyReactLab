@@ -2,8 +2,10 @@
 from typing import List, Dict
 # local
 from pythermodb_settings.models import ComponentKey
+from pythermodb_settings.utils import measure_time
 from pyThermoLinkDB.models import ModelSource
 from pyThermoLinkDB.thermo import Source
+from pyreactlab_core.models.reaction import Reaction
 # locals
 from .docs import (
     GasReactionSystem,
@@ -22,9 +24,10 @@ def summary() -> str:
         raise Exception(f"Error loading app summary: {e}") from e
 
 
+@measure_time
 def create_rxn(
         system_name: str,
-        reactions: List[Dict[str, str]],
+        reactions: List[Reaction],
         model_source: ModelSource,
         component_key: ComponentKey = "Formula-State",
         **kwargs
@@ -36,10 +39,8 @@ def create_rxn(
     ----------
     system_name : str
         Name of the reaction system.
-    reactions : list
-        List of reactions in the system must be in the form of a list of dictionaries as the following keys:
-        - 'reaction': str, the reaction equation.
-        - 'name': str, the name of the reaction.
+    reactions : list[Reaction]
+        List of reactions in the system must be in the form of a list of Reaction objects.
     model_source : ModelSource
         Inputs for the reaction system which contains the data source and equation source for the components in the reaction system.
     component_key : ComponentKey, optional
@@ -75,9 +76,10 @@ def create_rxn(
         raise Exception(f"Error creating reaction system: {e}") from e
 
 
+@measure_time
 def create_gas_rxn(
     system_name: str,
-    reactions: List[Dict[str, str]],
+    reactions: List[Reaction],
     model_source: ModelSource,
     component_key: ComponentKey = "Formula-State",
     **kwargs
@@ -89,10 +91,8 @@ def create_gas_rxn(
     ----------
     system_name : str
         Name of the reaction system.
-    reactions : list
-        List of reactions in the system must be in the form of a list of dictionaries as the following keys:
-        - 'reaction': str, the reaction equation.
-        - 'name': str, the name of the reaction.
+    reactions : list[Reaction]
+        List of reactions in the system must be in the form of a list of Reaction objects.
     model_source : ModelSource
         Inputs for the reaction system which
     component_key : ComponentKey, optional
@@ -134,9 +134,10 @@ def create_gas_rxn(
         raise Exception(f"Error creating reaction system: {e}") from e
 
 
+@measure_time
 def create_liquid_rxn(
         system_name: str,
-        reactions: List[Dict[str, str]],
+        reactions: List[Reaction],
         model_source: ModelSource,
         component_key: ComponentKey = "Formula-State",
         **kwargs
@@ -148,10 +149,8 @@ def create_liquid_rxn(
     ----------
     system_name : str
         Name of the reaction system.
-    reactions : list
-        List of reactions in the system must be in the form of a list of dictionaries as the following keys:
-        - 'reaction': str, the reaction equation.
-        - 'name': str, the name of the reaction.
+    reactions : list[Reaction]
+        List of reactions in the system must be in the form of a list of Reaction objects.
     model_source : ModelSource
         Inputs for the reaction system which
     component_key : ComponentKey, optional
